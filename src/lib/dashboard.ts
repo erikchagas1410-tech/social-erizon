@@ -25,13 +25,6 @@ type ActivityRow = {
   created_at: string;
 };
 
-type MetricsRow = {
-  pending_approval: number;
-  scheduled: number;
-  published: number;
-  approval_rate: number;
-};
-
 export async function getDashboardPayload(): Promise<DashboardPayload> {
   if (!hasSupabaseEnv()) {
     throw new Error(
@@ -41,8 +34,30 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
 
   const supabase = getSupabaseClient();
 
-  const [metricsResult, postsResult, activityResult] = await Promise.all([
-    supabase.from("dashboard_metrics").select("*").single(),
+  const [
+    pendingResult,
+    scheduledResult,
+    publishedResult,
+    approvalBaseResult,
+    postsResult,
+    activityResult
+  ] = await Promise.all([
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "scheduled"),
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "published"),
+    supabase
+      .from("posts")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["approved", "scheduled", "published"]),
     supabase
       .from("posts")
       .select("id, title, format, status, scheduled_for, published_at")
@@ -56,16 +71,17 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
       .limit(10)
   ]);
 
-  if (metricsResult.error || postsResult.error || activityResult.error) {
-    throw new Error(
-      [
-        metricsResult.error?.message,
-        postsResult.error?.message,
-        activityResult.error?.message
-      ]
-        .filter(Boolean)
-        .join(" | ")
-    );
+  const queryErrors = [
+    pendingResult.error,
+    scheduledResult.error,
+    publishedResult.error,
+    approvalBaseResult.error,
+    postsResult.error,
+    activityResult.error
+  ].filter((error): error is NonNullable<typeof error> => Boolean(error));
+
+  if (queryErrors.length) {
+    throw new Error(queryErrors.map((error) => error.message).join(" | "));
   }
 
   const scheduledRows = postsResult.data ?? [];
@@ -74,7 +90,12 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
   );
 
   return {
-    stats: mapMetrics(metricsResult.data),
+    stats: mapMetrics({
+      pendingApproval: pendingResult.count ?? 0,
+      scheduled: scheduledResult.count ?? 0,
+      published: publishedResult.count ?? 0,
+      approvalBase: approvalBaseResult.count ?? 0
+    }),
     scheduledPosts: scheduledRows.map((row) =>
       mapPost(row, publishChannelsByPost[row.id] ?? [])
     ),
@@ -83,12 +104,27 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
   };
 }
 
-function mapMetrics(row: MetricsRow | null): DashboardStats {
+function mapMetrics({
+  pendingApproval,
+  scheduled,
+  published,
+  approvalBase
+}: {
+  pendingApproval: number;
+  scheduled: number;
+  published: number;
+  approvalBase: number;
+}): DashboardStats {
+  const approvalRate =
+    approvalBase === 0
+      ? 0
+      : Number((((scheduled + published) / approvalBase) * 100).toFixed(2));
+
   return {
-    pendingApproval: row?.pending_approval ?? 0,
-    scheduled: row?.scheduled ?? 0,
-    published: row?.published ?? 0,
-    approvalRate: Number(row?.approval_rate ?? 0)
+    pendingApproval,
+    scheduled,
+    published,
+    approvalRate
   };
 }
 
