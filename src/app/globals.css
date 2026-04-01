@@ -650,7 +650,8 @@ button {
 }
 
 .field-shell textarea,
-.field-shell select {
+.field-shell select,
+.field-shell input {
   width: 100%;
   border: 1px solid var(--line-strong);
   border-radius: 16px;
@@ -658,6 +659,28 @@ button {
   color: var(--text);
   background: rgba(7, 11, 24, 0.92);
   resize: vertical;
+}
+
+.channel-fieldset {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.channel-fieldset legend {
+  padding: 0 8px;
+  color: #dce6ff;
+}
+
+.channel-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
 }
 
 .field-shell textarea::placeholder {
@@ -722,6 +745,16 @@ button {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.approval-card--selectable {
+  cursor: pointer;
+}
+
+.approval-card__select {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .approval-card__top,
 .approval-card__meta {
   display: flex;
@@ -744,6 +777,12 @@ button {
   margin-top: 16px;
   color: #b9c8f2;
   font-size: 0.88rem;
+}
+
+.queue-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
 }
 
 @media (max-width: 1280px) {

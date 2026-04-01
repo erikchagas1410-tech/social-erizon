@@ -7,6 +7,7 @@ export type DashboardStats = {
 
 export type PostFormat = "feed" | "carousel" | "story" | "reel";
 export type PostStatus = "pending" | "approved" | "scheduled" | "published";
+export type PublicationChannel = "linkedin" | "instagram";
 export type ActivityType =
   | "approval"
   | "generation"
@@ -20,6 +21,7 @@ export type ScheduledPost = {
   format: PostFormat;
   scheduledFor: string;
   status: PostStatus;
+  publishedChannels: PublicationChannel[];
 };
 
 export type ActivityItem = {

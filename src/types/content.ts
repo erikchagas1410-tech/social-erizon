@@ -18,6 +18,8 @@ export type ContentFormat =
   | "insight_estrategico"
   | "post_de_decisao";
 
+export type PublicationChannel = "linkedin" | "instagram";
+
 export type ErizonContentOutput = {
   titulo_interno: string;
   objetivo: string;
@@ -36,4 +38,6 @@ export type ErizonContentOutput = {
   sugestao_horario: string;
   justificativa: string;
   hipotese_performance: string;
+  asset_url_publicacao?: string | null;
+  canais_publicacao?: PublicationChannel[];
 };

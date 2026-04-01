@@ -1,4 +1,4 @@
-import { approvePost, schedulePost } from "@/app/command-center/actions";
+import { approvePost, publishPost, schedulePost } from "@/app/command-center/actions";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { ScheduledPost } from "@/types/dashboard";
 
@@ -93,6 +93,34 @@ export function ScheduledPanel({ posts }: ScheduledPanelProps) {
                   disabled={post.status === "published"}
                 >
                   Agendar
+                </button>
+              </form>
+
+              <form action={publishPost}>
+                <input type="hidden" name="postId" value={post.id} />
+                <input type="hidden" name="channel" value="linkedin" />
+                <button
+                  type="submit"
+                  className="ghost-button"
+                  disabled={post.publishedChannels.includes("linkedin")}
+                >
+                  {post.publishedChannels.includes("linkedin")
+                    ? "LinkedIn publicado"
+                    : "Publicar LinkedIn"}
+                </button>
+              </form>
+
+              <form action={publishPost}>
+                <input type="hidden" name="postId" value={post.id} />
+                <input type="hidden" name="channel" value="instagram" />
+                <button
+                  type="submit"
+                  className="ghost-button"
+                  disabled={post.publishedChannels.includes("instagram")}
+                >
+                  {post.publishedChannels.includes("instagram")
+                    ? "Instagram publicado"
+                    : "Publicar Instagram"}
                 </button>
               </form>
             </div>

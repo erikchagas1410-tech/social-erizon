@@ -5,7 +5,12 @@ import { revalidatePath } from "next/cache";
 import { generateErizonContent } from "@/lib/groq";
 import { serializeContentPayload } from "@/lib/content-persistence";
 import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
-import { ContentFormat, ContentPillar, ErizonContentOutput } from "@/types/content";
+import {
+  ContentFormat,
+  ContentPillar,
+  ErizonContentOutput,
+  PublicationChannel
+} from "@/types/content";
 
 export type GenerateContentActionState = {
   error: string | null;
@@ -38,6 +43,13 @@ export async function generateContentAction(
   const objective = String(formData.get("objective") ?? "").trim();
   const pillar = String(formData.get("pillar") ?? "").trim() as ContentPillar | "";
   const format = String(formData.get("format") ?? "").trim() as ContentFormat | "";
+  const assetUrl = String(formData.get("assetUrl") ?? "").trim();
+  const channels = formData
+    .getAll("channels")
+    .map((item) => String(item))
+    .filter((item): item is PublicationChannel => {
+      return item === "linkedin" || item === "instagram";
+    });
 
   if (!topic) {
     return {
@@ -55,16 +67,21 @@ export async function generateContentAction(
       pillar,
       format
     });
+    const enrichedContent: ErizonContentOutput = {
+      ...content,
+      asset_url_publicacao: assetUrl || null,
+      canais_publicacao: channels
+    };
 
     const supabase = getSupabaseClient();
-    const serializedContent = serializeContentPayload(content);
+    const serializedContent = serializeContentPayload(enrichedContent);
 
     const insertPostResult = await supabase
       .from("posts")
       .insert({
-        title: content.gancho,
+        title: enrichedContent.gancho,
         caption: serializedContent,
-        format: mapContentFormatToPostFormat(content.formato),
+        format: mapContentFormatToPostFormat(enrichedContent.formato),
         status: "pending",
         updated_at: new Date().toISOString()
       })
@@ -81,7 +98,7 @@ export async function generateContentAction(
       {
         post_id: postId,
         type: "generation",
-        message: `Conteudo gerado pela IA para aprovacao: ${content.gancho}`
+        message: `Conteudo gerado pela IA para aprovacao: ${enrichedContent.gancho}`
       },
       {
         post_id: postId,
@@ -101,7 +118,7 @@ export async function generateContentAction(
     return {
       error: null,
       success: "Conteudo gerado e enviado para a fila de aprovacao.",
-      result: content,
+      result: enrichedContent,
       savedPostId: postId
     };
   } catch (error) {

@@ -3,6 +3,7 @@ import {
   ActivityItem,
   DashboardPayload,
   DashboardStats,
+  PublicationChannel,
   PostStatus,
   ScheduledPost
 } from "@/types/dashboard";
@@ -17,6 +18,7 @@ type PostRow = {
 };
 
 type ActivityRow = {
+  post_id?: string | null;
   id: string;
   type: ActivityItem["type"];
   message: string;
@@ -66,9 +68,16 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
     );
   }
 
+  const scheduledRows = postsResult.data ?? [];
+  const publishChannelsByPost = await getPublishedChannelsByPost(
+    scheduledRows.map((row) => row.id)
+  );
+
   return {
     stats: mapMetrics(metricsResult.data),
-    scheduledPosts: (postsResult.data ?? []).map(mapPost),
+    scheduledPosts: scheduledRows.map((row) =>
+      mapPost(row, publishChannelsByPost[row.id] ?? [])
+    ),
     activities: (activityResult.data ?? []).map(mapActivity),
     source: "supabase"
   };
@@ -83,13 +92,17 @@ function mapMetrics(row: MetricsRow | null): DashboardStats {
   };
 }
 
-function mapPost(row: PostRow): ScheduledPost {
+function mapPost(
+  row: PostRow,
+  publishedChannels: PublicationChannel[]
+): ScheduledPost {
   return {
     id: row.id,
     title: row.title,
     format: row.format,
     status: row.status,
-    scheduledFor: row.scheduled_for ?? row.published_at ?? new Date().toISOString()
+    scheduledFor: row.scheduled_for ?? row.published_at ?? new Date().toISOString(),
+    publishedChannels
   };
 }
 
@@ -100,4 +113,53 @@ function mapActivity(row: ActivityRow): ActivityItem {
     message: row.message,
     createdAt: row.created_at
   };
+}
+
+async function getPublishedChannelsByPost(postIds: string[]) {
+  if (!postIds.length) {
+    return {} as Record<string, PublicationChannel[]>;
+  }
+
+  const supabase = getSupabaseClient();
+  const result = await supabase
+    .from("post_activities")
+    .select("post_id, message")
+    .eq("type", "publish")
+    .in("post_id", postIds);
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  const map: Record<string, PublicationChannel[]> = {};
+
+  for (const row of result.data as Array<{ post_id: string; message: string }>) {
+    const channel = parsePublishedChannel(row.message);
+
+    if (!channel) {
+      continue;
+    }
+
+    if (!map[row.post_id]) {
+      map[row.post_id] = [];
+    }
+
+    if (!map[row.post_id].includes(channel)) {
+      map[row.post_id].push(channel);
+    }
+  }
+
+  return map;
+}
+
+function parsePublishedChannel(message: string): PublicationChannel | null {
+  if (message.startsWith("Published on linkedin:")) {
+    return "linkedin";
+  }
+
+  if (message.startsWith("Published on instagram:")) {
+    return "instagram";
+  }
+
+  return null;
 }

@@ -10,7 +10,9 @@ type ApprovalRow = {
   created_at: string;
 };
 
-export async function getApprovalQueue(): Promise<ApprovalQueueItem[]> {
+export async function getApprovalQueue(
+  status: "pending" | "approved" = "pending"
+): Promise<ApprovalQueueItem[]> {
   if (!hasSupabaseEnv()) {
     throw new Error(
       "Supabase environment variables are missing. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
@@ -22,7 +24,7 @@ export async function getApprovalQueue(): Promise<ApprovalQueueItem[]> {
   const result = await supabase
     .from("posts")
     .select("id, title, caption, format, status, created_at")
-    .eq("status", "pending")
+    .eq("status", status)
     .order("created_at", { ascending: false })
     .limit(12);
 

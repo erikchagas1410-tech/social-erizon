@@ -95,6 +95,27 @@ export function GenerateContentForm() {
           </label>
         </div>
 
+        <label className="field-shell">
+          <span>URL do asset para publicacao</span>
+          <input
+            name="assetUrl"
+            type="url"
+            placeholder="https://..."
+          />
+        </label>
+
+        <fieldset className="channel-fieldset">
+          <legend>Canais de publicacao pretendidos</legend>
+          <label className="channel-option">
+            <input type="checkbox" name="channels" value="linkedin" defaultChecked />
+            <span>LinkedIn</span>
+          </label>
+          <label className="channel-option">
+            <input type="checkbox" name="channels" value="instagram" />
+            <span>Instagram</span>
+          </label>
+        </fieldset>
+
         <SubmitButton />
       </form>
 
