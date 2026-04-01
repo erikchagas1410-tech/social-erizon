@@ -41,6 +41,5 @@ export type NavGroup = {
   items: Array<{
     label: string;
     href: string;
-    active?: boolean;
   }>;
 };

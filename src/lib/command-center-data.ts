@@ -86,23 +86,23 @@ export const navGroups: NavGroup[] = [
   {
     label: "Principal",
     items: [
-      { label: "Command Center", href: "/command-center", active: true },
-      { label: "Aprovacao", href: "#" },
-      { label: "Calendario", href: "#" }
+      { label: "Command Center", href: "/command-center" },
+      { label: "Aprovacao", href: "/approval" },
+      { label: "Calendario", href: "/calendar" }
     ]
   },
   {
     label: "Inteligencia",
     items: [
-      { label: "Audiencia IA", href: "#" },
-      { label: "Analytics", href: "#" }
+      { label: "Audiencia IA", href: "/audience-ai" },
+      { label: "Analytics", href: "/analytics" }
     ]
   },
   {
     label: "Producao",
     items: [
-      { label: "Gerar Conteudo", href: "#" },
-      { label: "Estudio de Design", href: "#" }
+      { label: "Gerar Conteudo", href: "/generate-content" },
+      { label: "Estudio de Design", href: "/design-studio" }
     ]
   }
 ];

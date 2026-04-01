@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { NavGroup } from "@/types/dashboard";
 
@@ -7,6 +10,8 @@ type SidebarProps = {
 };
 
 export function Sidebar({ groups }: SidebarProps) {
+  const pathname = usePathname();
+
   return (
     <aside className="sidebar-shell">
       <div>
@@ -27,7 +32,7 @@ export function Sidebar({ groups }: SidebarProps) {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className={`sidebar-link${item.active ? " is-active" : ""}`}
+                    className={`sidebar-link${pathname === item.href ? " is-active" : ""}`}
                   >
                     {item.label}
                   </Link>
