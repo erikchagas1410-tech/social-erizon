@@ -649,6 +649,12 @@ button {
   font-size: 0.92rem;
 }
 
+.field-help {
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.82rem;
+}
+
 .field-shell textarea,
 .field-shell select,
 .field-shell input {

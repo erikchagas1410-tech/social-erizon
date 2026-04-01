@@ -104,6 +104,18 @@ export function GenerateContentForm() {
           />
         </label>
 
+        <label className="field-shell">
+          <span>Ou envie o asset da publicacao</span>
+          <input
+            name="assetFile"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+          />
+          <small className="field-help">
+            Se voce enviar um arquivo, a app sobe o asset automaticamente e salva a URL publica na peca.
+          </small>
+        </label>
+
         <fieldset className="channel-fieldset">
           <legend>Canais de publicacao pretendidos</legend>
           <label className="channel-option">

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { uploadAssetForPublishing } from "@/lib/asset-upload";
 import { generateErizonContent } from "@/lib/groq";
 import { serializeContentPayload } from "@/lib/content-persistence";
 import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
@@ -44,6 +45,7 @@ export async function generateContentAction(
   const pillar = String(formData.get("pillar") ?? "").trim() as ContentPillar | "";
   const format = String(formData.get("format") ?? "").trim() as ContentFormat | "";
   const assetUrl = String(formData.get("assetUrl") ?? "").trim();
+  const assetFile = formData.get("assetFile");
   const channels = formData
     .getAll("channels")
     .map((item) => String(item))
@@ -61,6 +63,22 @@ export async function generateContentAction(
   }
 
   try {
+    let resolvedAssetUrl = assetUrl;
+
+    if (assetFile instanceof File && assetFile.size > 0) {
+      resolvedAssetUrl = await uploadAssetForPublishing(assetFile);
+    }
+
+    if (channels.includes("instagram") && !resolvedAssetUrl) {
+      return {
+        error:
+          "Para publicar no Instagram, envie um arquivo de imagem ou informe uma URL publica do asset.",
+        success: null,
+        result: null,
+        savedPostId: null
+      };
+    }
+
     const content = await generateErizonContent({
       topic,
       objective,
@@ -69,7 +87,7 @@ export async function generateContentAction(
     });
     const enrichedContent: ErizonContentOutput = {
       ...content,
-      asset_url_publicacao: assetUrl || null,
+      asset_url_publicacao: resolvedAssetUrl || null,
       canais_publicacao: channels
     };
 
