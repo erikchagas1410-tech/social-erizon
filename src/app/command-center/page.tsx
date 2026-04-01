@@ -1,4 +1,5 @@
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { CommandCenterActions } from "@/components/dashboard/CommandCenterActions";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { ScheduledPanel } from "@/components/dashboard/ScheduledPanel";
 import { Sidebar } from "@/components/dashboard/Sidebar";
@@ -20,6 +21,7 @@ export default async function CommandCenterPage() {
           <TopHeader
             title="Command Center"
             subtitle="Visao em tempo real da operacao de conteudo"
+            actions={<CommandCenterActions />}
           />
 
           <section className="metrics-grid" aria-label="Resumo operacional">

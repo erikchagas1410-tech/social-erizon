@@ -1,22 +1,26 @@
+import Link from "next/link";
+
 type EmptyStateProps = {
   title: string;
   description: string;
   ctaLabel: string;
+  ctaHref?: string;
 };
 
 export function EmptyState({
   title,
   description,
-  ctaLabel
+  ctaLabel,
+  ctaHref = "/approval"
 }: EmptyStateProps) {
   return (
     <div className="empty-state">
       <div className="empty-state__orb" />
       <h3>{title}</h3>
       <p>{description}</p>
-      <button type="button" className="ghost-button">
+      <Link href={ctaHref} className="ghost-button">
         {ctaLabel}
-      </button>
+      </Link>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { approvePost, publishPost, schedulePost } from "@/app/command-center/actions";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { ScheduledPost } from "@/types/dashboard";
@@ -29,14 +31,15 @@ export function ScheduledPanel({ posts }: ScheduledPanelProps) {
             <p className="section-kicker">Pipeline</p>
             <h3>Proximos agendados</h3>
           </div>
-          <button type="button" className="ghost-button">
+          <Link href="/calendar" className="ghost-button">
             Ver calendario
-          </button>
+          </Link>
         </div>
         <EmptyState
           title="Nenhum post futuro encontrado"
           description="A operacao ainda nao tem publicacoes definidas para os proximos dias."
           ctaLabel="Aprovar posts"
+          ctaHref="/approval"
         />
       </section>
     );
@@ -52,9 +55,9 @@ export function ScheduledPanel({ posts }: ScheduledPanelProps) {
             Conteudos prontos para aprovacao, sequenciamento e publicacao.
           </p>
         </div>
-        <button type="button" className="ghost-button">
+        <Link href="/calendar" className="ghost-button">
           Ver calendario
-        </button>
+        </Link>
       </div>
 
       <div className="scheduled-list">

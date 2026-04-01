@@ -1,9 +1,10 @@
 type TopHeaderProps = {
   title: string;
   subtitle: string;
+  actions?: React.ReactNode;
 };
 
-export function TopHeader({ title, subtitle }: TopHeaderProps) {
+export function TopHeader({ title, subtitle, actions }: TopHeaderProps) {
   return (
     <header className="top-header">
       <div>
@@ -12,17 +13,7 @@ export function TopHeader({ title, subtitle }: TopHeaderProps) {
         <p className="top-header__subtitle">{subtitle}</p>
       </div>
 
-      <div className="top-header__actions">
-        <button type="button" className="ghost-button">
-          Atualizar
-        </button>
-        <button type="button" className="primary-button secondary">
-          Gerar Post
-        </button>
-        <button type="button" className="primary-button">
-          Gerar Mes
-        </button>
-      </div>
+      {actions ?? <div className="top-header__actions" />}
     </header>
   );
 }
