@@ -627,6 +627,125 @@ button {
   font-size: 0.9rem;
 }
 
+.content-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.field-shell span {
+  color: #dce6ff;
+  font-size: 0.92rem;
+}
+
+.field-shell textarea,
+.field-shell select {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: var(--text);
+  background: rgba(7, 11, 24, 0.92);
+  resize: vertical;
+}
+
+.field-shell textarea::placeholder {
+  color: #7283af;
+}
+
+.form-feedback {
+  margin: 16px 0 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  line-height: 1.6;
+}
+
+.form-feedback--error {
+  border: 1px solid rgba(251, 113, 133, 0.18);
+  background: rgba(251, 113, 133, 0.08);
+  color: #ffd6de;
+}
+
+.form-feedback--success {
+  border: 1px solid rgba(var(--glow-green), 0.18);
+  background: rgba(var(--glow-green), 0.08);
+  color: #baf7da;
+}
+
+.generated-summary {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.generated-summary__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.generated-summary h4 {
+  margin: 14px 0 0;
+  font-size: 1.05rem;
+}
+
+.generated-summary p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.approval-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.approval-card {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.approval-card__top,
+.approval-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.approval-card h4 {
+  margin: 14px 0 0;
+}
+
+.approval-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.approval-card__meta {
+  margin-top: 16px;
+  color: #b9c8f2;
+  font-size: 0.88rem;
+}
+
 @media (max-width: 1280px) {
   .command-center-grid {
     grid-template-columns: 260px minmax(0, 1fr);
@@ -642,7 +761,8 @@ button {
   }
 
   .brand-grid,
-  .rule-columns {
+  .rule-columns,
+  .field-grid {
     grid-template-columns: 1fr;
   }
 }

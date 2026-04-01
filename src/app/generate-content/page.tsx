@@ -1,13 +1,16 @@
+import { ApprovalQueuePanel } from "@/components/content/ApprovalQueuePanel";
+import { GenerateContentForm } from "@/components/content/GenerateContentForm";
 import { BrandRulesPanel } from "@/components/content/BrandRulesPanel";
-import { JsonPreview } from "@/components/content/JsonPreview";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { TopHeader } from "@/components/dashboard/TopHeader";
+import { getApprovalQueue } from "@/lib/approval";
 import { navGroups } from "@/lib/command-center-data";
-import { sampleErizonPost } from "@/lib/erizon-brand";
 
 export const dynamic = "force-dynamic";
 
-export default function GenerateContentPage() {
+export default async function GenerateContentPage() {
+  const approvalQueue = await getApprovalQueue();
+
   return (
     <main className="command-center-shell">
       <div className="command-center-grid command-center-grid--single">
@@ -19,8 +22,9 @@ export default function GenerateContentPage() {
             subtitle="Criacao estruturada no padrao premium, preciso e reconhecivel da Erizon"
           />
 
+          <GenerateContentForm />
           <BrandRulesPanel />
-          <JsonPreview title="Modelo base de saida Erizon" value={sampleErizonPost} />
+          <ApprovalQueuePanel items={approvalQueue} />
         </section>
       </div>
     </main>
