@@ -1,0 +1,239 @@
+{
+  "titulo_interno": "command_center_operational_spec",
+  "objetivo": "Definir a tela central de operacao do ERIZON SOCIAL AI como painel vivo de aprovacao, agendamento, publicacao e atividade do agente.",
+  "pilar": "produto",
+  "formato": "spec_json",
+  "ideia_central": "Transformar a central em um painel operacional premium que reflita o estado real da maquina de conteudo em tempo real.",
+  "angulo": "painel de comando com foco em decisao, previsibilidade, leitura rapida e percepcao de controle operacional.",
+  "gancho": "A central nao pode parecer um dashboard comum. Ela precisa parecer o coracao operacional do agente.",
+  "estrutura_criativo": {
+    "page_id": "command-center",
+    "route": "/command-center",
+    "layout": {
+      "type": "three_column_shell",
+      "regions": [
+        {
+          "id": "sidebar",
+          "position": "left",
+          "width": 280,
+          "fixed": true
+        },
+        {
+          "id": "main",
+          "position": "center",
+          "fluid": true
+        },
+        {
+          "id": "activity_feed",
+          "position": "right",
+          "width": 360,
+          "sticky": true
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "sidebar",
+        "titulo": "Navegacao Principal",
+        "component": "Sidebar",
+        "items": [
+          {
+            "group": "Principal",
+            "links": [
+              "Command Center",
+              "Aprovacao",
+              "Calendario"
+            ]
+          },
+          {
+            "group": "Inteligencia",
+            "links": [
+              "Audiencia IA",
+              "Analytics"
+            ]
+          },
+          {
+            "group": "Producao",
+            "links": [
+              "Gerar Conteudo",
+              "Estudio de Design"
+            ]
+          }
+        ],
+        "footer": {
+          "ai_status": "IA ativa 24/7",
+          "scheduler_monitoring": "Monitoramento de agendamentos"
+        }
+      },
+      {
+        "id": "header",
+        "titulo": "Header Principal",
+        "component": "TopHeader",
+        "content": {
+          "title": "Command Center",
+          "subtitle": "Visao em tempo real da operacao de conteudo",
+          "actions": [
+            "Atualizar",
+            "Gerar Post",
+            "Gerar Mes"
+          ]
+        }
+      },
+      {
+        "id": "stats",
+        "titulo": "Cards de Resumo",
+        "component": "MetricGrid",
+        "cards": [
+          "Aguardando aprovacao",
+          "Agendados",
+          "Publicados",
+          "Taxa de aprovacao"
+        ]
+      },
+      {
+        "id": "scheduled_panel",
+        "titulo": "Proximos Agendados",
+        "component": "ScheduledPanel",
+        "content": {
+          "show_fields": [
+            "title",
+            "scheduledFor",
+            "format",
+            "status"
+          ],
+          "primary_cta": "Aprovar",
+          "secondary_cta": "Ver calendario",
+          "empty_state": {
+            "title": "Nenhum post agendado ainda",
+            "description": "A operacao ainda nao tem publicacoes futuras definidas.",
+            "cta": "Aprovar posts"
+          }
+        }
+      },
+      {
+        "id": "activity_feed",
+        "titulo": "Feed de Atividade",
+        "component": "ActivityFeed",
+        "content": {
+          "event_types": [
+            "approval",
+            "generation",
+            "schedule",
+            "publish",
+            "error"
+          ]
+        }
+      }
+    ]
+  },
+  "texto_criativo": {
+    "product_principles": [
+      "Leitura imediata do estado da operacao",
+      "Sensacao de controle e inteligencia em tempo real",
+      "Foco em aprovacao, agendamento e publicacao",
+      "Atividade viva para transmitir operacao ativa"
+    ],
+    "user_flow": [
+      "Agente gera conteudo",
+      "Post entra em aprovacao",
+      "Ao aprovar, vai para agendamento",
+      "Ao agendar, aparece em proximos agendados",
+      "Ao publicar, soma em publicados",
+      "Toda acao gera item no feed de atividade"
+    ]
+  },
+  "legenda": {
+    "data_contracts": {
+      "DashboardStats": {
+        "pendingApproval": "number",
+        "scheduled": "number",
+        "published": "number",
+        "approvalRate": "number"
+      },
+      "ScheduledPost": {
+        "id": "string",
+        "title": "string",
+        "format": "feed | carousel | story | reel",
+        "scheduledFor": "string",
+        "status": "pending | approved | scheduled | published"
+      },
+      "ActivityItem": {
+        "id": "string",
+        "type": "approval | generation | schedule | publish | error",
+        "message": "string",
+        "createdAt": "string"
+      }
+    },
+    "api_shape": {
+      "dashboard": {
+        "stats": "DashboardStats",
+        "scheduledPosts": "ScheduledPost[]",
+        "activities": "ActivityItem[]"
+      }
+    },
+    "database_model": {
+      "tables": [
+        {
+          "name": "posts",
+          "fields": [
+            "id",
+            "title",
+            "caption",
+            "format",
+            "status",
+            "scheduled_for",
+            "published_at",
+            "created_at",
+            "updated_at"
+          ]
+        },
+        {
+          "name": "post_activities",
+          "fields": [
+            "id",
+            "post_id",
+            "type",
+            "message",
+            "created_at"
+          ]
+        }
+      ],
+      "derived_metrics": [
+        "pending approval count",
+        "scheduled count",
+        "published count",
+        "approval rate"
+      ]
+    }
+  },
+  "cta": {
+    "implementation_next_step": "Scaffold da rota /command-center com componentes desacoplados e mock de dados tipado.",
+    "design_next_step": "Aplicar tema dark premium com grid sutil, glow controlado e hierarquia forte para numeros e estados."
+  },
+  "prompt_imagem": {
+    "visual_direction": "Interface de painel de comando premium em fundo escuro com grid tecnico sutil, cards translucedos com glow neon discreto, contrastes fortes em azul, ciano e roxo, tipografia futurista apenas no titulo principal, restante minimalista e altamente legivel, sensacao de operacao viva, layout desktop moderno com sidebar fixa, cards de metricas, painel central de agendamentos e feed lateral de atividade.",
+    "style_tokens": {
+      "theme": "dark_premium_tech",
+      "background": "near_black with subtle grid",
+      "primary_colors": [
+        "#7C3AED",
+        "#2563EB",
+        "#22D3EE"
+      ],
+      "surface": "glass_dark",
+      "radius": "20px",
+      "shadow": "soft_neon_glow"
+    }
+  },
+  "alt_text": "Especificacao estruturada da Command Center da Erizon com sidebar, header, metricas, proximos agendados, feed de atividade, contratos de dados e direcao visual premium tech.",
+  "hashtags": [
+    "command-center",
+    "dashboard-spec",
+    "erizon-social-ai",
+    "content-operations",
+    "product-structure"
+  ],
+  "sugestao_horario": "n/a",
+  "justificativa": "O workspace atual nao possui base de app visivel, entao a melhor entrega acionavel e persistivel neste momento e uma especificacao JSON unica que preserve arquitetura, contratos de dados, fluxo operacional e direcao visual para a implementacao da tela.",
+  "hipotese_performance": "Com essa estrutura, a central tende a aumentar percepcao de produto premium, reduzir friccao operacional e facilitar evolucao futura para dados em tempo real, aprovacao em lote e monitoramento de publicacao."
+}
