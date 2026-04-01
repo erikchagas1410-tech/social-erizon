@@ -10,6 +10,7 @@ import { ErizonContentOutput } from "@/types/content";
 let fontCache: ArrayBuffer | null = null;
 let logoCache: string | null = null;
 
+const FONT_SUPABASE_PATH = "data/inter-extrabold.woff";
 const FONT_GOOGLE_CSS_URL =
   "https://fonts.googleapis.com/css?family=Inter:800&subset=latin";
 
@@ -262,8 +263,22 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
-async function loadFont() {
+async function loadFont(): Promise<ArrayBuffer> {
   if (fontCache) {
+    return fontCache;
+  }
+
+  const localFont = loadLocalFont();
+
+  if (localFont) {
+    fontCache = localFont;
+    return fontCache;
+  }
+
+  const cachedSupabaseFont = await loadFontFromSupabase();
+
+  if (cachedSupabaseFont) {
+    fontCache = cachedSupabaseFont;
     return fontCache;
   }
 
@@ -296,7 +311,79 @@ async function loadFont() {
   }
 
   fontCache = await fontResponse.arrayBuffer();
+  void cacheFontInSupabase(fontCache);
   return fontCache;
+}
+
+function loadLocalFont(): ArrayBuffer | null {
+  const candidatePaths = [
+    path.resolve(process.cwd(), "public/fonts/inter-extrabold.woff"),
+    path.resolve(process.cwd(), "public/fonts/inter-extrabold.ttf")
+  ];
+
+  for (const candidatePath of candidatePaths) {
+    if (fs.existsSync(candidatePath)) {
+      const buffer = fs.readFileSync(candidatePath);
+      return Uint8Array.from(buffer).buffer;
+    }
+  }
+
+  return null;
+}
+
+async function loadFontFromSupabase(): Promise<ArrayBuffer | null> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || "erizon-media";
+
+  if (!supabaseUrl || !supabaseKey) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/storage/v1/object/${bucket}/${FONT_SUPABASE_PATH}`,
+      {
+        headers: {
+          Authorization: `Bearer ${supabaseKey}`
+        },
+        cache: "force-cache"
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
+async function cacheFontInSupabase(font: ArrayBuffer) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || "erizon-media";
+
+  if (!supabaseUrl || !supabaseKey) {
+    return;
+  }
+
+  try {
+    await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${FONT_SUPABASE_PATH}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": "font/woff",
+        "x-upsert": "true"
+      },
+      body: Buffer.from(font),
+      cache: "no-store"
+    });
+  } catch {
+    // Ignora erro de cache para nao travar a geracao do asset.
+  }
 }
 
 function loadLogoDataUrl() {
