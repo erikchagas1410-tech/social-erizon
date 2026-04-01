@@ -73,6 +73,36 @@ button {
   padding: 32px;
 }
 
+.error-shell {
+  width: min(780px, 100%);
+  margin: 8vh auto 0;
+  padding: 32px;
+  border: 1px solid rgba(251, 113, 133, 0.22);
+  border-radius: var(--radius-xl);
+  background: rgba(20, 10, 24, 0.82);
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+}
+
+.error-shell h1 {
+  margin: 12px 0 0;
+  font-family: var(--title-font);
+  letter-spacing: 0.04em;
+}
+
+.error-shell p {
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.error-shell__detail {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(251, 113, 133, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffd6de;
+}
+
 .landing-card {
   width: min(640px, 100%);
   padding: 40px;

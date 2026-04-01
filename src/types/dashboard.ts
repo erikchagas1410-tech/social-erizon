@@ -33,7 +33,7 @@ export type DashboardPayload = {
   stats: DashboardStats;
   scheduledPosts: ScheduledPost[];
   activities: ActivityItem[];
-  source: "mock" | "supabase";
+  source: "supabase";
 };
 
 export type NavGroup = {

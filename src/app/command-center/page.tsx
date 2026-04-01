@@ -51,19 +51,14 @@ export default async function CommandCenterPage() {
 
           <ScheduledPanel
             posts={dashboard.scheduledPosts}
-            source={dashboard.source}
           />
 
           <div className="data-source-banner">
-            <span className={`data-source-pill data-source-pill--${dashboard.source}`}>
-              {dashboard.source === "supabase"
-                ? "Dados ao vivo via Supabase"
-                : "Modo demonstracao com mock tipado"}
+            <span className="data-source-pill data-source-pill--supabase">
+              Dados ao vivo via Supabase
             </span>
             <p>
-              {dashboard.source === "supabase"
-                ? "A central esta refletindo o estado real da operacao."
-                : "Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY para ligar a operacao real."}
+              A central esta refletindo apenas o estado real da operacao.
             </p>
           </div>
         </section>

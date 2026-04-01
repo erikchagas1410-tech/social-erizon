@@ -1,8 +1,3 @@
-import {
-  activities as mockActivities,
-  dashboardStats as mockStats,
-  scheduledPosts as mockScheduledPosts
-} from "@/lib/command-center-data";
 import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
 import {
   ActivityItem,
@@ -37,58 +32,46 @@ type MetricsRow = {
 
 export async function getDashboardPayload(): Promise<DashboardPayload> {
   if (!hasSupabaseEnv()) {
-    return {
-      stats: mockStats,
-      scheduledPosts: mockScheduledPosts,
-      activities: mockActivities,
-      source: "mock"
-    };
+    throw new Error(
+      "Supabase environment variables are missing. Configure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY."
+    );
   }
 
-  try {
-    const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient();
 
-    const [metricsResult, postsResult, activityResult] = await Promise.all([
-      supabase.from("dashboard_metrics").select("*").single(),
-      supabase
-        .from("posts")
-        .select("id, title, format, status, scheduled_for, published_at")
-        .not("scheduled_for", "is", null)
-        .order("scheduled_for", { ascending: true })
-        .limit(6),
-      supabase
-        .from("post_activities")
-        .select("id, type, message, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10)
-    ]);
+  const [metricsResult, postsResult, activityResult] = await Promise.all([
+    supabase.from("dashboard_metrics").select("*").single(),
+    supabase
+      .from("posts")
+      .select("id, title, format, status, scheduled_for, published_at")
+      .not("scheduled_for", "is", null)
+      .order("scheduled_for", { ascending: true })
+      .limit(6),
+    supabase
+      .from("post_activities")
+      .select("id, type, message, created_at")
+      .order("created_at", { ascending: false })
+      .limit(10)
+  ]);
 
-    if (metricsResult.error || postsResult.error || activityResult.error) {
-      throw new Error(
-        [
-          metricsResult.error?.message,
-          postsResult.error?.message,
-          activityResult.error?.message
-        ]
-          .filter(Boolean)
-          .join(" | ")
-      );
-    }
-
-    return {
-      stats: mapMetrics(metricsResult.data),
-      scheduledPosts: (postsResult.data ?? []).map(mapPost),
-      activities: (activityResult.data ?? []).map(mapActivity),
-      source: "supabase"
-    };
-  } catch {
-    return {
-      stats: mockStats,
-      scheduledPosts: mockScheduledPosts,
-      activities: mockActivities,
-      source: "mock"
-    };
+  if (metricsResult.error || postsResult.error || activityResult.error) {
+    throw new Error(
+      [
+        metricsResult.error?.message,
+        postsResult.error?.message,
+        activityResult.error?.message
+      ]
+        .filter(Boolean)
+        .join(" | ")
+    );
   }
+
+  return {
+    stats: mapMetrics(metricsResult.data),
+    scheduledPosts: (postsResult.data ?? []).map(mapPost),
+    activities: (activityResult.data ?? []).map(mapActivity),
+    source: "supabase"
+  };
 }
 
 function mapMetrics(row: MetricsRow | null): DashboardStats {

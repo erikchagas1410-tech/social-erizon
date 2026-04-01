@@ -4,7 +4,6 @@ import { ScheduledPost } from "@/types/dashboard";
 
 type ScheduledPanelProps = {
   posts: ScheduledPost[];
-  source: "mock" | "supabase";
 };
 
 const formatLabel: Record<ScheduledPost["format"], string> = {
@@ -21,7 +20,7 @@ const statusLabel: Record<ScheduledPost["status"], string> = {
   published: "Publicado"
 };
 
-export function ScheduledPanel({ posts, source }: ScheduledPanelProps) {
+export function ScheduledPanel({ posts }: ScheduledPanelProps) {
   if (!posts.length) {
     return (
       <section className="panel-shell panel-shell--soft">
@@ -79,7 +78,7 @@ export function ScheduledPanel({ posts, source }: ScheduledPanelProps) {
                 <button
                   type="submit"
                   className="primary-button secondary"
-                  disabled={source === "mock" || post.status !== "pending"}
+                  disabled={post.status !== "pending"}
                 >
                   Aprovar
                 </button>
@@ -91,7 +90,7 @@ export function ScheduledPanel({ posts, source }: ScheduledPanelProps) {
                 <button
                   type="submit"
                   className="ghost-button"
-                  disabled={source === "mock" || post.status === "published"}
+                  disabled={post.status === "published"}
                 >
                   Agendar
                 </button>
