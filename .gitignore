@@ -6,3 +6,5 @@ dist
 *.log
 .env.local
 _upstream_repo
+
+.vercel
