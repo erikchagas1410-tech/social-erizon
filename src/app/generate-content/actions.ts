@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { uploadAssetForPublishing } from "@/lib/asset-upload";
+import { uploadAssetForPublishing, uploadGeneratedAsset } from "@/lib/asset-upload";
+import { generateErizonAsset } from "@/lib/branded-image";
 import { generateErizonContent } from "@/lib/groq";
 import { serializeContentPayload } from "@/lib/content-persistence";
 import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
@@ -69,22 +70,20 @@ export async function generateContentAction(
       resolvedAssetUrl = await uploadAssetForPublishing(assetFile);
     }
 
-    if (channels.includes("instagram") && !resolvedAssetUrl) {
-      return {
-        error:
-          "Para publicar no Instagram, envie um arquivo de imagem ou informe uma URL publica do asset.",
-        success: null,
-        result: null,
-        savedPostId: null
-      };
-    }
-
     const content = await generateErizonContent({
       topic,
       objective,
       pillar,
       format
     });
+    if (!resolvedAssetUrl) {
+      const generatedAsset = await generateErizonAsset(content);
+      resolvedAssetUrl = await uploadGeneratedAsset(
+        generatedAsset,
+        `${content.titulo_interno || "erizon-post"}.png`
+      );
+    }
+
     const enrichedContent: ErizonContentOutput = {
       ...content,
       asset_url_publicacao: resolvedAssetUrl || null,

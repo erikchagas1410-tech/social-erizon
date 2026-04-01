@@ -102,6 +102,9 @@ export function GenerateContentForm() {
             type="url"
             placeholder="https://..."
           />
+          <small className="field-help">
+            Opcional. Se voce nao informar nada aqui nem enviar arquivo, a Erizon gera o criativo automaticamente.
+          </small>
         </label>
 
         <label className="field-shell">

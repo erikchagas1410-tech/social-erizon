@@ -31,6 +31,33 @@ export async function uploadAssetForPublishing(file: File): Promise<string> {
   );
 }
 
+export async function uploadGeneratedAsset(
+  bytes: Buffer,
+  filenameBase: string,
+  mimeType = "image/png"
+): Promise<string> {
+  const extension = inferExtension(filenameBase, mimeType);
+
+  if (hasSupabaseEnv()) {
+    return uploadToSupabaseStorage(bytes, mimeType, extension);
+  }
+
+  const blobToken =
+    process.env.BLOB_READ_WRITE_TOKEN ?? process.env.BLOB_UPLOAD_TOKEN ?? "";
+
+  if (blobToken) {
+    return uploadToVercelBlob(bytes, mimeType, extension, blobToken);
+  }
+
+  if (process.env.IMGBB_API_KEY) {
+    return uploadToImgBb(bytes, process.env.IMGBB_API_KEY);
+  }
+
+  throw new Error(
+    "Nenhum storage configurado para upload do asset gerado. Configure Supabase Storage, Vercel Blob ou ImgBB."
+  );
+}
+
 async function uploadToSupabaseStorage(
   bytes: Buffer,
   mimeType: string,
