@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import React from "react";
 import sharp from "sharp";
+import satori from "satori";
 
 import { ErizonContentOutput } from "@/types/content";
 
@@ -11,6 +13,7 @@ type CanvasSpec = {
   kind: "square" | "portrait" | "story" | "landscape";
 };
 
+let fontCache: ArrayBuffer | null = null;
 let logoCache: string | null = null;
 
 export async function generateErizonAsset(content: ErizonContentOutput) {
@@ -18,182 +21,443 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
   const accent = pickAccent(content.pilar);
   const accentAlt = pickAccentAlt(content.pilar);
   const logoDataUrl = loadLogoDataUrl();
-  const hookLines = wrapText(content.gancho, lineLimit(canvas, "hook"), 4);
-  const supportLines = wrapText(content.ideia_central, lineLimit(canvas, "support"), 3);
-  const ctaLine = truncate(content.cta, canvas.kind === "landscape" ? 84 : 100);
-  const eyebrow = buildEyebrow(content, canvas);
-  const badge = buildBadge(content);
-  const titleSize = getTitleSize(canvas, hookLines.length);
-  const supportSize = getSupportSize(canvas);
-  const centerText = shouldCenter(canvas, content);
-  const textX = centerText ? canvas.width / 2 : getLeftX(canvas);
-  const textAnchor = centerText ? "middle" : "start";
-  const heroTop = getHeroTop(canvas);
-  const supportTop = heroTop + hookLines.length * (titleSize * 1.04) + 46;
-  const ctaTop = canvas.height - getBottomInset(canvas);
-  const logoX = 56;
-  const logoY = 54;
-  const badgeWidth = Math.max(180, badge.length * 10 + 36);
-  const badgeX = canvas.width - badgeWidth - 54;
 
-  const hookText = buildTspans(
-    hookLines,
-    textX,
-    heroTop,
-    titleSize,
-    textAnchor,
-    true
-  );
-  const supportText = buildTspans(
-    supportLines,
-    textX,
-    supportTop,
-    supportSize,
-    textAnchor,
-    false
-  );
+  try {
+    const font = await loadFont();
+    const svg = await satori(buildArtwork(content, canvas, accent, accentAlt, logoDataUrl), {
+      width: canvas.width,
+      height: canvas.height,
+      fonts: [
+        {
+          name: "ErizonSans",
+          data: font,
+          weight: 700,
+          style: "normal"
+        }
+      ]
+    });
 
-  const svg = `
-    <svg width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#08020f"/>
-          <stop offset="45%" stop-color="#0a0718"/>
-          <stop offset="100%" stop-color="#07111f"/>
-        </linearGradient>
-        <linearGradient id="gridAccent" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="${withAlpha(accent, 0.12)}"/>
-          <stop offset="100%" stop-color="${withAlpha(accentAlt, 0.08)}"/>
-        </linearGradient>
-        <linearGradient id="titleAccent" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="${accent}"/>
-          <stop offset="55%" stop-color="${accentAlt}"/>
-          <stop offset="100%" stop-color="#00F2FF"/>
-        </linearGradient>
-        <pattern id="grid" width="${canvas.kind === "landscape" ? 44 : 56}" height="${canvas.kind === "landscape" ? 44 : 56}" patternUnits="userSpaceOnUse">
-          <path d="M ${canvas.kind === "landscape" ? 44 : 56} 0 L 0 0 0 ${canvas.kind === "landscape" ? 44 : 56}" fill="none" stroke="url(#gridAccent)" stroke-width="1"/>
-        </pattern>
-        <filter id="softGlow">
-          <feGaussianBlur stdDeviation="28" result="blur"/>
-          <feMerge>
-            <feMergeNode in="blur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-        <filter id="titleGlow">
-          <feGaussianBlur stdDeviation="9" result="blur"/>
-          <feMerge>
-            <feMergeNode in="blur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-
-      <rect width="100%" height="100%" fill="url(#bg)"/>
-      <rect width="100%" height="100%" fill="url(#grid)" opacity="0.95"/>
-
-      <circle cx="${canvas.width / 2}" cy="${canvas.height / 2}" r="${Math.min(canvas.width, canvas.height) * 0.22}" fill="${withAlpha(accent, 0.24)}" filter="url(#softGlow)"/>
-      <circle cx="${canvas.width / 2}" cy="${canvas.height / 2}" r="${Math.min(canvas.width, canvas.height) * 0.31}" fill="none" stroke="${withAlpha(accent, 0.22)}" stroke-width="1.4"/>
-      <circle cx="${canvas.width / 2}" cy="${canvas.height / 2}" r="${Math.min(canvas.width, canvas.height) * 0.40}" fill="none" stroke="${withAlpha(accent, 0.10)}" stroke-width="1.1"/>
-
-      <circle cx="${canvas.width / 2}" cy="${canvas.kind === "story" ? 180 : 0}" r="${canvas.kind === "story" ? 260 : 220}" fill="${withAlpha(accent, 0.18)}" filter="url(#softGlow)"/>
-      <circle cx="${canvas.width / 2}" cy="${canvas.height}" r="${canvas.kind === "story" ? 300 : 240}" fill="${withAlpha(accentAlt, 0.18)}" filter="url(#softGlow)"/>
-
-      <path d="M 30 70 L 30 30 L 70 30" fill="none" stroke="${withAlpha(accent, 0.58)}" stroke-width="2"/>
-      <path d="M ${canvas.width - 70} 30 L ${canvas.width - 30} 30 L ${canvas.width - 30} 70" fill="none" stroke="${withAlpha(accent, 0.58)}" stroke-width="2"/>
-      <path d="M 30 ${canvas.height - 70} L 30 ${canvas.height - 30} L 70 ${canvas.height - 30}" fill="none" stroke="${withAlpha(accent, 0.58)}" stroke-width="2"/>
-      <path d="M ${canvas.width - 70} ${canvas.height - 30} L ${canvas.width - 30} ${canvas.height - 30} L ${canvas.width - 30} ${canvas.height - 70}" fill="none" stroke="${withAlpha(accent, 0.58)}" stroke-width="2"/>
-
-      <line x1="18%" y1="18%" x2="18.8%" y2="13%" stroke="${withAlpha(accentAlt, 0.84)}" stroke-width="2"/>
-      <line x1="81%" y1="27%" x2="80.2%" y2="22%" stroke="${withAlpha(accent, 0.78)}" stroke-width="2"/>
-      <line x1="22%" y1="78%" x2="22.8%" y2="73%" stroke="${withAlpha(accent, 0.78)}" stroke-width="2"/>
-      <line x1="82%" y1="72%" x2="81.2%" y2="67%" stroke="${withAlpha(accentAlt, 0.84)}" stroke-width="2"/>
-
-      ${logoDataUrl ? `<image href="${logoDataUrl}" x="${logoX}" y="${logoY}" width="42" height="42" />` : ""}
-      <text x="${logoDataUrl ? logoX + 60 : logoX}" y="${logoY + 20}" fill="#FFFFFF" font-size="24" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="5">ERIZON</text>
-      <text x="${logoDataUrl ? logoX + 60 : logoX}" y="${logoY + 39}" fill="rgba(255,255,255,0.55)" font-size="10" font-family="Courier New, monospace" letter-spacing="2">PERFORMANCE INTELLIGENCE</text>
-
-      <rect x="${badgeX}" y="${logoY}" width="${badgeWidth}" height="38" rx="19" fill="${withAlpha(accent, 0.12)}" stroke="${withAlpha(accent, 0.34)}"/>
-      <text x="${badgeX + badgeWidth / 2}" y="${logoY + 24}" text-anchor="middle" fill="${accent}" font-size="11" font-family="Courier New, monospace" letter-spacing="2">${escapeXml(badge)}</text>
-
-      <text x="${textX}" y="${heroTop - 34}" text-anchor="${textAnchor}" fill="${accentAlt}" font-size="${canvas.kind === "story" ? 13 : 12}" font-family="Courier New, monospace" letter-spacing="3">${escapeXml(eyebrow)}</text>
-
-      <text x="${textX}" y="${heroTop}" text-anchor="${textAnchor}" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="${titleSize}" letter-spacing="-2" fill="#FFFFFF" filter="url(#titleGlow)">
-        ${hookText}
-      </text>
-
-      <line x1="${centerText ? canvas.width / 2 - 44 : textX}" y1="${supportTop - 22}" x2="${centerText ? canvas.width / 2 + 44 : textX + 88}" y2="${supportTop - 22}" stroke="${accent}" stroke-width="2.2"/>
-
-      <text x="${textX}" y="${supportTop}" text-anchor="${textAnchor}" font-family="Arial, Helvetica, sans-serif" font-size="${supportSize}" fill="rgba(255,255,255,0.78)">
-        ${supportText}
-      </text>
-
-      ${buildStatsSvg(content, canvas, accent, accentAlt, centerText, textX, supportTop + supportLines.length * (supportSize * 1.45) + 38)}
-
-      <text x="${centerText ? canvas.width / 2 : textX}" y="${ctaTop - 42}" text-anchor="${textAnchor}" fill="rgba(255,255,255,0.50)" font-size="12" font-family="Courier New, monospace" letter-spacing="3">DECISAO • CLAREZA • LUCRO</text>
-      <text x="${centerText ? canvas.width / 2 : textX}" y="${ctaTop - 12}" text-anchor="${textAnchor}" fill="#FFFFFF" font-size="${canvas.kind === "landscape" ? 18 : 20}" font-family="Arial, Helvetica, sans-serif">${escapeXml(ctaLine)}</text>
-      <text x="${centerText ? canvas.width / 2 : textX}" y="${ctaTop + 20}" text-anchor="${textAnchor}" fill="${accent}" font-size="15" font-family="Courier New, monospace" letter-spacing="3">ERIZON.AI</text>
-    </svg>
-  `;
-
-  return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).png().toBuffer();
+  } catch {
+    const svg = buildFallbackSvg(content, canvas, accent, accentAlt, logoDataUrl);
+    return sharp(Buffer.from(svg)).png().toBuffer();
+  }
 }
 
-function buildStatsSvg(
+function buildArtwork(
   content: ErizonContentOutput,
   canvas: CanvasSpec,
   accent: string,
   accentAlt: string,
-  centered: boolean,
-  baseX: number,
-  topY: number
+  logoDataUrl: string | null
 ) {
-  const stats = [
-    { value: pillarLabel(content.pilar).slice(0, 8), label: "PILAR" },
-    { value: formatLabel(content.formato).slice(0, 12).toUpperCase(), label: "FORMATO" },
-    { value: (content.sugestao_horario || "18:00").toUpperCase(), label: "HORARIO" }
-  ];
-  const gap = canvas.kind === "landscape" ? 160 : 180;
-  const startX = centered ? canvas.width / 2 - gap : baseX;
+  const hookLines = wrapText(content.gancho, getHookLineLimit(canvas), getHookMaxLines(canvas));
+  const supportLines = wrapText(content.ideia_central, getSupportLineLimit(canvas), 3);
+  const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 96);
+  const badge = buildBadge(content);
+  const eyebrow = buildEyebrow(content, canvas);
 
-  return stats
-    .map((stat, index) => {
-      const x = centered ? startX + index * gap : baseX + index * gap;
-      const anchor = centered ? "middle" : "start";
-      const valueColor = index === 1 ? accentAlt : "#FFFFFF";
-      const separator =
-        index < stats.length - 1
-          ? `<line x1="${centered ? x + gap / 2 - 12 : x + 126}" y1="${topY - 6}" x2="${centered ? x + gap / 2 - 12 : x + 126}" y2="${topY + 40}" stroke="${withAlpha(accent, 0.34)}" stroke-width="1"/>`
-          : "";
+  return (
+    <div
+      style={{
+        width: `${canvas.width}px`,
+        height: `${canvas.height}px`,
+        display: "flex",
+        position: "relative",
+        overflow: "hidden",
+        background:
+          "linear-gradient(160deg, #05040b 0%, #0a0718 50%, #06111c 100%)",
+        color: "#f6f7fb",
+        fontFamily: "ErizonSans"
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          inset: "0",
+          display: "flex",
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
+          backgroundSize: `${canvas.kind === "story" ? 72 : 54}px ${canvas.kind === "story" ? 72 : 54}px`,
+          opacity: 0.55
+        }}
+      />
 
-      return `
-        <text x="${x}" y="${topY}" text-anchor="${anchor}" fill="${valueColor}" font-size="${canvas.kind === "landscape" ? 22 : 26}" font-family="Courier New, monospace">${escapeXml(stat.value)}</text>
-        <text x="${x}" y="${topY + 18}" text-anchor="${anchor}" fill="rgba(255,255,255,0.42)" font-size="10" font-family="Courier New, monospace" letter-spacing="2">${stat.label}</text>
-        ${separator}
-      `;
-    })
-    .join("");
+      <div
+        style={{
+          position: "absolute",
+          top: canvas.kind === "story" ? "-160px" : "-100px",
+          right: canvas.kind === "landscape" ? "-80px" : "-120px",
+          width: canvas.kind === "story" ? "520px" : "420px",
+          height: canvas.kind === "story" ? "520px" : "420px",
+          display: "flex",
+          borderRadius: "999px",
+          background: `radial-gradient(circle, ${withAlpha(accent, 0.5)} 0%, ${withAlpha(
+            accent,
+            0.16
+          )} 38%, transparent 72%)`
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          bottom: canvas.kind === "story" ? "-140px" : "-120px",
+          left: canvas.kind === "landscape" ? "58%" : "-120px",
+          width: canvas.kind === "story" ? "560px" : "420px",
+          height: canvas.kind === "story" ? "560px" : "420px",
+          display: "flex",
+          borderRadius: "999px",
+          background: `radial-gradient(circle, ${withAlpha(accentAlt, 0.35)} 0%, ${withAlpha(
+            accentAlt,
+            0.1
+          )} 42%, transparent 72%)`
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          inset: getInset(canvas, 26),
+          display: "flex",
+          borderRadius: "34px",
+          border: `1px solid ${withAlpha(accent, 0.28)}`
+        }}
+      />
+
+      <div
+        style={{
+          position: "absolute",
+          top: `${getOuterPadding(canvas) - 18}px`,
+          left: `${getOuterPadding(canvas)}px`,
+          right: `${getOuterPadding(canvas)}px`,
+          height: "3px",
+          display: "flex",
+          background: `linear-gradient(90deg, transparent 0%, ${accent} 18%, ${accentAlt} 72%, transparent 100%)`
+        }}
+      />
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: `${getOuterPadding(canvas)}px`
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "16px"
+            }}
+          >
+            {logoDataUrl ? (
+              <img
+                src={logoDataUrl}
+                width={canvas.kind === "story" ? 60 : 48}
+                height={canvas.kind === "story" ? 60 : 48}
+                style={{ borderRadius: "14px" }}
+              />
+            ) : null}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "6px"
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  color: "#ffffff",
+                  fontSize: `${canvas.kind === "story" ? 28 : 22}px`,
+                  letterSpacing: "0.22em",
+                  fontWeight: 700
+                }}
+              >
+                ERIZON
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  color: withAlpha("#ffffff", 0.62),
+                  fontSize: `${canvas.kind === "story" ? 14 : 11}px`,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase"
+                }}
+              >
+                Agency OS // Performance Intelligence
+              </div>
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              padding: canvas.kind === "story" ? "12px 22px" : "10px 18px",
+              borderRadius: "999px",
+              border: `1px solid ${withAlpha(accent, 0.42)}`,
+              background: withAlpha(accent, 0.12),
+              color: accent,
+              fontSize: `${canvas.kind === "story" ? 16 : 13}px`,
+              letterSpacing: "0.16em",
+              textTransform: "uppercase"
+            }}
+          >
+            {badge}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            flex: 1,
+            gap: canvas.kind === "story" ? "24px" : "20px",
+            paddingTop: canvas.kind === "story" ? "36px" : "28px",
+            paddingBottom: canvas.kind === "story" ? "32px" : "22px"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              color: accentAlt,
+              fontSize: `${canvas.kind === "story" ? 18 : 13}px`,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase"
+            }}
+          >
+            {eyebrow}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: canvas.kind === "story" ? "8px" : "6px",
+              maxWidth: `${getHeadlineWidth(canvas)}px`
+            }}
+          >
+            {hookLines.map((line, index) => (
+              <div
+                key={`${line}-${index}`}
+                style={{
+                  display: "flex",
+                  color: index === hookLines.length - 1 ? accentAlt : "#ffffff",
+                  fontSize: `${getHeadlineSize(canvas, hookLines.length)}px`,
+                  lineHeight: 0.95,
+                  letterSpacing: "-0.055em",
+                  fontWeight: 700
+                }}
+              >
+                {line}
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              width: `${canvas.kind === "story" ? 132 : 96}px`,
+              height: "4px",
+              background: `linear-gradient(90deg, ${accent} 0%, ${accentAlt} 100%)`,
+              borderRadius: "999px"
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: canvas.kind === "story" ? "10px" : "8px",
+              maxWidth: `${getSupportWidth(canvas)}px`
+            }}
+          >
+            {supportLines.map((line, index) => (
+              <div
+                key={`${line}-${index}`}
+                style={{
+                  display: "flex",
+                  color: withAlpha("#ffffff", 0.82),
+                  fontSize: `${getSupportSize(canvas)}px`,
+                  lineHeight: 1.22,
+                  fontWeight: 700
+                }}
+              >
+                {line}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: canvas.kind === "landscape" ? "row" : "column",
+            justifyContent: "space-between",
+            alignItems: canvas.kind === "landscape" ? "flex-end" : "flex-start",
+            gap: "18px"
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              maxWidth: `${canvas.kind === "landscape" ? 620 : getSupportWidth(canvas)}px`
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                color: withAlpha("#ffffff", 0.5),
+                fontSize: `${canvas.kind === "story" ? 16 : 12}px`,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase"
+              }}
+            >
+              Clareza • Ação • Resultado
+            </div>
+            <div
+              style={{
+                display: "flex",
+                color: "#ffffff",
+                fontSize: `${canvas.kind === "story" ? 28 : canvas.kind === "landscape" ? 22 : 20}px`,
+                lineHeight: 1.15,
+                fontWeight: 700
+              }}
+            >
+              {cta}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              color: accent,
+              fontSize: `${canvas.kind === "story" ? 22 : 18}px`,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase"
+            }}
+          >
+            ERIZON.AI
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function buildTspans(
-  lines: string[],
-  x: number,
-  startY: number,
-  fontSize: number,
-  textAnchor: string,
-  accentLastLine: boolean
-) {
-  return lines
-    .map((line, index) => {
-      const dy = index === 0 ? 0 : Math.round(fontSize * 1.04);
-      const fill =
-        accentLastLine && index === lines.length - 1
-          ? ` fill="url(#titleAccent)"`
-          : ` fill="#FFFFFF"`;
+async function loadFont(): Promise<ArrayBuffer> {
+  if (fontCache) {
+    return fontCache;
+  }
 
-      return `<tspan x="${x}" dy="${dy}" text-anchor="${textAnchor}"${fill}>${escapeXml(line)}</tspan>`;
+  const font = loadLocalFont();
+  if (!font) {
+    throw new Error("Nenhuma fonte local encontrada para o renderer.");
+  }
+
+  fontCache = font;
+  return fontCache;
+}
+
+function loadLocalFont(): ArrayBuffer | null {
+  const candidates = [
+    path.resolve(process.cwd(), "public/fonts/inter-extrabold.woff"),
+    path.resolve(process.cwd(), "public/fonts/inter-extrabold.ttf"),
+    "C:/Windows/Fonts/arialbd.ttf",
+    "C:/Windows/Fonts/ARIALBD.TTF",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+  ];
+
+  for (const candidatePath of candidates) {
+    if (fs.existsSync(candidatePath)) {
+      return Uint8Array.from(fs.readFileSync(candidatePath)).buffer;
+    }
+  }
+
+  return null;
+}
+
+function buildFallbackSvg(
+  content: ErizonContentOutput,
+  canvas: CanvasSpec,
+  accent: string,
+  accentAlt: string,
+  logoDataUrl: string | null
+) {
+  const hookLines = wrapText(content.gancho, getHookLineLimit(canvas), getHookMaxLines(canvas));
+  const supportLines = wrapText(content.ideia_central, getSupportLineLimit(canvas), 3);
+  const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 96);
+  const outer = getOuterPadding(canvas);
+  const titleY = canvas.kind === "story" ? 300 : canvas.kind === "portrait" ? 250 : canvas.kind === "landscape" ? 210 : 220;
+  const titleSize = getHeadlineSize(canvas, hookLines.length);
+  const supportSize = getSupportSize(canvas);
+  const titleBlock = hookLines
+    .map((line, index) => {
+      const y = titleY + index * Math.round(titleSize * 0.98);
+      const fill = index === hookLines.length - 1 ? accentAlt : "#FFFFFF";
+      return `<text x="${outer}" y="${y}" fill="${fill}" font-size="${titleSize}" font-family="Arial, Helvetica, sans-serif" font-weight="800">${escapeXml(line)}</text>`;
     })
     .join("");
+  const supportStartY = titleY + hookLines.length * Math.round(titleSize * 0.98) + 70;
+  const supportBlock = supportLines
+    .map((line, index) => {
+      const y = supportStartY + index * Math.round(supportSize * 1.35);
+      return `<text x="${outer}" y="${y}" fill="rgba(255,255,255,0.82)" font-size="${supportSize}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(line)}</text>`;
+    })
+    .join("");
+
+  return `
+    <svg width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#05040b"/>
+          <stop offset="50%" stop-color="#0a0718"/>
+          <stop offset="100%" stop-color="#06111c"/>
+        </linearGradient>
+        <pattern id="grid" width="${canvas.kind === "story" ? 72 : 54}" height="${canvas.kind === "story" ? 72 : 54}" patternUnits="userSpaceOnUse">
+          <path d="M ${canvas.kind === "story" ? 72 : 54} 0 L 0 0 0 ${canvas.kind === "story" ? 72 : 54}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bg)"/>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+      <circle cx="${canvas.width - outer * 0.7}" cy="${outer * 1.1}" r="${canvas.kind === "story" ? 270 : 210}" fill="${withAlpha(accent, 0.28)}"/>
+      <circle cx="${outer * 0.6}" cy="${canvas.height - outer * 0.2}" r="${canvas.kind === "story" ? 300 : 220}" fill="${withAlpha(accentAlt, 0.18)}"/>
+      <rect x="${outer - 16}" y="${outer - 16}" width="${canvas.width - (outer - 16) * 2}" height="${canvas.height - (outer - 16) * 2}" rx="28" fill="none" stroke="${withAlpha(accent, 0.3)}"/>
+      <rect x="${outer}" y="${outer - 18}" width="${canvas.width - outer * 2}" height="3" fill="${accent}"/>
+      ${logoDataUrl ? `<image href="${logoDataUrl}" x="${outer}" y="${outer}" width="48" height="48" />` : ""}
+      <text x="${outer + (logoDataUrl ? 64 : 0)}" y="${outer + 22}" fill="#FFFFFF" font-size="24" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="4">ERIZON</text>
+      <text x="${outer + (logoDataUrl ? 64 : 0)}" y="${outer + 42}" fill="rgba(255,255,255,0.58)" font-size="11" font-family="Arial, Helvetica, sans-serif">AGENCY OS // PERFORMANCE INTELLIGENCE</text>
+      <text x="${outer}" y="${titleY - 42}" fill="${accentAlt}" font-size="${canvas.kind === "story" ? 18 : 13}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(
+        buildEyebrow(content, canvas)
+      )}</text>
+      ${titleBlock}
+      <rect x="${outer}" y="${supportStartY - 32}" width="${canvas.kind === "story" ? 132 : 96}" height="4" rx="2" fill="${accent}"/>
+      ${supportBlock}
+      <text x="${outer}" y="${canvas.height - outer - 42}" fill="rgba(255,255,255,0.5)" font-size="${canvas.kind === "story" ? 16 : 12}" font-family="Arial, Helvetica, sans-serif" font-weight="700">CLAREZA • ACAO • RESULTADO</text>
+      <text x="${outer}" y="${canvas.height - outer - 12}" fill="#FFFFFF" font-size="${canvas.kind === "story" ? 28 : canvas.kind === "landscape" ? 22 : 20}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(
+        cta
+      )}</text>
+      <text x="${outer}" y="${canvas.height - outer + 18}" fill="${accent}" font-size="${canvas.kind === "story" ? 22 : 18}" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="3">ERIZON.AI</text>
+    </svg>
+  `;
 }
 
 function selectCanvasSpec(content: ErizonContentOutput): CanvasSpec {
@@ -224,16 +488,6 @@ function selectCanvasSpec(content: ErizonContentOutput): CanvasSpec {
   return { width: 1080, height: 1080, kind: "square" };
 }
 
-function shouldCenter(canvas: CanvasSpec, content: ErizonContentOutput) {
-  if (canvas.kind === "landscape" || canvas.kind === "story") {
-    return false;
-  }
-
-  return !["comparacao", "analise", "checklist", "mini_aula", "insight_estrategico"].includes(
-    content.formato
-  );
-}
-
 function looksLikeStory(content: ErizonContentOutput) {
   const base = `${content.formato} ${content.estrutura_criativo} ${content.prompt_imagem}`.toLowerCase();
   return base.includes("story") || base.includes("stories") || base.includes("9:16");
@@ -241,11 +495,11 @@ function looksLikeStory(content: ErizonContentOutput) {
 
 function buildBadge(content: ErizonContentOutput) {
   if (content.formato === "carrossel") {
-    return "CAROUSEL";
+    return "Carousel";
   }
 
   if (content.canais_publicacao?.includes("linkedin") && !content.canais_publicacao.includes("instagram")) {
-    return "LINKEDIN";
+    return "LinkedIn";
   }
 
   return pillarLabel(content.pilar);
@@ -254,70 +508,75 @@ function buildBadge(content: ErizonContentOutput) {
 function buildEyebrow(content: ErizonContentOutput, canvas: CanvasSpec) {
   const channelLabel = content.canais_publicacao?.includes("instagram")
     ? content.canais_publicacao.includes("linkedin")
-      ? "INSTAGRAM + LINKEDIN"
-      : "INSTAGRAM"
+      ? "Instagram + LinkedIn"
+      : "Instagram"
     : content.canais_publicacao?.includes("linkedin")
-      ? "LINKEDIN"
+      ? "LinkedIn"
       : canvas.kind === "story"
-        ? "INSTAGRAM STORIES"
-        : "SOCIAL POST";
+        ? "Instagram Stories"
+        : "Social Post";
 
-  return `${channelLabel} // ${formatLabel(content.formato).toUpperCase()}`;
+  return `${channelLabel} // ${formatLabel(content.formato)}`;
 }
 
-function getLeftX(canvas: CanvasSpec) {
+function getOuterPadding(canvas: CanvasSpec) {
   switch (canvas.kind) {
-    case "landscape":
-      return 60;
     case "story":
-      return 78;
+      return 88;
     case "portrait":
       return 76;
+    case "landscape":
+      return 58;
     default:
-      return 88;
+      return 68;
   }
 }
 
-function getHeroTop(canvas: CanvasSpec) {
+function getInset(canvas: CanvasSpec, delta: number) {
+  const outer = getOuterPadding(canvas);
+  return `${outer - delta}px`;
+}
+
+function getHeadlineWidth(canvas: CanvasSpec) {
   switch (canvas.kind) {
     case "story":
-      return 280;
+      return 840;
     case "portrait":
-      return 230;
-    case "square":
-      return 210;
+      return 860;
+    case "landscape":
+      return 730;
     default:
-      return 220;
+      return 820;
   }
 }
 
-function getBottomInset(canvas: CanvasSpec) {
+function getSupportWidth(canvas: CanvasSpec) {
   switch (canvas.kind) {
     case "story":
-      return 110;
+      return 760;
     case "portrait":
-      return 86;
-    case "square":
-      return 80;
+      return 780;
+    case "landscape":
+      return 620;
     default:
-      return 78;
+      return 760;
   }
 }
 
-function getTitleSize(canvas: CanvasSpec, lineCount: number) {
+function getHeadlineSize(canvas: CanvasSpec, lineCount: number) {
   if (canvas.kind === "story") {
-    return lineCount > 3 ? 88 : 104;
+    return lineCount > 4 ? 90 : 108;
   }
 
   if (canvas.kind === "portrait") {
-    return lineCount > 3 ? 78 : 94;
+    return lineCount > 4 ? 78 : 94;
   }
 
   if (canvas.kind === "landscape") {
-    return lineCount > 3 ? 64 : 76;
+    return lineCount > 3 ? 58 : 72;
   }
 
-  return lineCount > 3 ? 70 : 84;
+  return lineCount > 4 ? 72 : 86;
 }
 
 function getSupportSize(canvas: CanvasSpec) {
@@ -333,29 +592,40 @@ function getSupportSize(canvas: CanvasSpec) {
   }
 }
 
-function lineLimit(canvas: CanvasSpec, type: "hook" | "support") {
-  if (type === "hook") {
-    switch (canvas.kind) {
-      case "story":
-        return 12;
-      case "portrait":
-        return 14;
-      case "landscape":
-        return 16;
-      default:
-        return 15;
-    }
-  }
-
+function getHookLineLimit(canvas: CanvasSpec) {
   switch (canvas.kind) {
     case "story":
-      return 22;
+      return 14;
+    case "portrait":
+      return 16;
+    case "landscape":
+      return 20;
+    default:
+      return 16;
+  }
+}
+
+function getHookMaxLines(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "story":
+      return 5;
+    case "landscape":
+      return 3;
+    default:
+      return 4;
+  }
+}
+
+function getSupportLineLimit(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "story":
+      return 26;
     case "portrait":
       return 28;
     case "landscape":
-      return 30;
+      return 34;
     default:
-      return 26;
+      return 28;
   }
 }
 
@@ -416,30 +686,30 @@ function truncate(value: string, maxLength: number) {
 function pickAccent(pillar: ErizonContentOutput["pilar"]) {
   switch (pillar) {
     case "educacao":
-      return "#00F2FF";
+      return "#00E7FF";
     case "desejo":
-      return "#FF00E5";
+      return "#FF2BD6";
     case "conexao":
-      return "#38BDF8";
+      return "#39C6FF";
     case "prova":
-      return "#7C3AED";
+      return "#7C5CFF";
     default:
-      return "#BC13FE";
+      return "#B517FF";
   }
 }
 
 function pickAccentAlt(pillar: ErizonContentOutput["pilar"]) {
   switch (pillar) {
     case "educacao":
-      return "#BC13FE";
+      return "#B517FF";
     case "desejo":
-      return "#FF4488";
+      return "#FF7A00";
     case "conexao":
-      return "#BC13FE";
+      return "#B517FF";
     case "prova":
-      return "#00F2FF";
+      return "#00E7FF";
     default:
-      return "#00F2FF";
+      return "#00E7FF";
   }
 }
 
