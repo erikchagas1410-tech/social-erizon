@@ -9,16 +9,20 @@ export async function persistGeneratedContent(content: ErizonContentOutput) {
   let enrichedContent = content;
 
   if (!enrichedContent.asset_url_publicacao) {
-    const generatedAsset = await generateErizonAsset(enrichedContent);
-    const uploadedAssetUrl = await uploadGeneratedAsset(
-      generatedAsset,
-      `${enrichedContent.titulo_interno || "erizon-post"}.png`
-    );
+    try {
+      const generatedAsset = await generateErizonAsset(enrichedContent);
+      const uploadedAssetUrl = await uploadGeneratedAsset(
+        generatedAsset,
+        `${enrichedContent.titulo_interno || "erizon-post"}.png`
+      );
 
-    enrichedContent = {
-      ...enrichedContent,
-      asset_url_publicacao: uploadedAssetUrl
-    };
+      enrichedContent = {
+        ...enrichedContent,
+        asset_url_publicacao: uploadedAssetUrl
+      };
+    } catch (error) {
+      console.error("Falha ao gerar/upload do asset da peca:", error);
+    }
   }
 
   const serializedContent = serializeContentPayload(enrichedContent);

@@ -16,301 +16,311 @@ type CanvasSpec = {
 let fontCache: ArrayBuffer | null = null;
 let logoCache: string | null = null;
 
-const FONT_SUPABASE_PATH = "data/montserrat-black.woff";
+const FONT_SUPABASE_PATH = "data/inter-extrabold.woff";
 const FONT_GOOGLE_CSS_URL =
-  "https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap";
+  "https://fonts.googleapis.com/css?family=Inter:800&subset=latin";
 
 export async function generateErizonAsset(content: ErizonContentOutput) {
-  const font = await loadFont();
   const logoDataUrl = loadLogoDataUrl();
   const canvas = selectCanvasSpec(content);
   const accent = pickAccent(content.pilar);
   const accentAlt = pickAccentAlt(content.pilar);
-  const hookLines = wrapText(content.gancho, lineLimit(canvas, "hook"), 4);
-  const supportLines = wrapText(content.ideia_central, lineLimit(canvas, "support"), 3);
-  const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 110);
-  const isCentered = shouldUseCenteredLayout(content, canvas);
-  const titleSize = getTitleSize(canvas, hookLines.length);
 
-  const svg = await satori(
-    <div
-      style={{
-        width: `${canvas.width}px`,
-        height: `${canvas.height}px`,
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        position: "relative",
-        overflow: "hidden",
-        background: "linear-gradient(160deg, #08020f 0%, #0a0718 45%, #07111f 100%)",
-        color: "#FFFFFF",
-        padding: getPadding(canvas),
-        fontFamily: "Montserrat"
-      }}
-    >
-      <BackgroundLayers canvas={canvas} accent={accent} accentAlt={accentAlt} />
-      <CornerAccents canvas={canvas} accent={accent} />
+  try {
+    const font = await loadFont();
+    const hookLines = wrapText(content.gancho, lineLimit(canvas, "hook"), 4);
+    const supportLines = wrapText(content.ideia_central, lineLimit(canvas, "support"), 3);
+    const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 110);
+    const isCentered = shouldUseCenteredLayout(content, canvas);
+    const titleSize = getTitleSize(canvas, hookLines.length);
 
+    const svg = await satori(
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "16px",
-          position: "relative",
-          zIndex: 2
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          {logoDataUrl ? (
-            <img
-              src={logoDataUrl}
-              width={canvas.kind === "landscape" ? 34 : 40}
-              height={canvas.kind === "landscape" ? 34 : 40}
-              style={{ borderRadius: "10px" }}
-            />
-          ) : (
-            <div
-              style={{
-                width: canvas.kind === "landscape" ? "34px" : "40px",
-                height: canvas.kind === "landscape" ? "34px" : "40px",
-                borderRadius: "10px",
-                background: `linear-gradient(135deg, ${accent}, ${accentAlt})`,
-                boxShadow: `0 0 20px ${withAlpha(accent, 0.45)}`
-              }}
-            />
-          )}
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            <div
-              style={{
-                fontSize: canvas.kind === "landscape" ? "18px" : "20px",
-                letterSpacing: "0.24em",
-                textTransform: "uppercase"
-              }}
-            >
-              Erizon
-            </div>
-            <div
-              style={{
-                fontSize: canvas.kind === "landscape" ? "10px" : "11px",
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "rgba(255,255,255,0.55)"
-              }}
-            >
-              Performance Intelligence
-            </div>
-          </div>
-        </div>
-
-        <div
-          style={{
-            padding: canvas.kind === "landscape" ? "8px 12px" : "8px 16px",
-            borderRadius: "999px",
-            border: `1px solid ${withAlpha(accent, 0.34)}`,
-            background: `linear-gradient(135deg, ${withAlpha(accent, 0.15)}, ${withAlpha(
-              accentAlt,
-              0.12
-            )})`,
-            color: accent,
-            fontSize: canvas.kind === "landscape" ? "10px" : "11px",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase"
-          }}
-        >
-          {buildBadge(content)}
-        </div>
-      </div>
-
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
+          width: `${canvas.width}px`,
+          height: `${canvas.height}px`,
           display: "flex",
           flexDirection: "column",
-          alignItems: isCentered ? "center" : "flex-start",
-          justifyContent: "center",
-          textAlign: isCentered ? "center" : "left",
-          width: isCentered ? "100%" : canvas.kind === "landscape" ? "56%" : "100%",
-          maxWidth: isCentered ? "100%" : canvas.kind === "landscape" ? "620px" : "840px",
-          flex: 1
+          justifyContent: "space-between",
+          position: "relative",
+          overflow: "hidden",
+          background: "linear-gradient(160deg, #08020f 0%, #0a0718 45%, #07111f 100%)",
+          color: "#FFFFFF",
+          padding: getPadding(canvas),
+          fontFamily: "Inter"
         }}
       >
-        <div
-          style={{
-            fontSize: canvas.kind === "story" ? "13px" : "12px",
-            letterSpacing: "0.24em",
-            textTransform: "uppercase",
-            color: accentAlt,
-            textShadow: `0 0 18px ${withAlpha(accentAlt, 0.7)}`,
-            marginBottom: "26px"
-          }}
-        >
-          {buildEyebrow(content, canvas)}
-        </div>
-
-        {hookLines.map((line, index) => (
-          <div
-            key={`${line}-${index}`}
-            style={{
-              fontSize: `${titleSize}px`,
-              lineHeight: 1.03,
-              letterSpacing: "-0.05em",
-              color: index === hookLines.length - 1 ? "transparent" : "#FFFFFF",
-              background:
-                index === hookLines.length - 1
-                  ? `linear-gradient(135deg, ${accent} 0%, ${accentAlt} 60%, #00F2FF 100%)`
-                  : undefined,
-              WebkitBackgroundClip: index === hookLines.length - 1 ? "text" : undefined,
-              textShadow:
-                index === hookLines.length - 1
-                  ? `0 0 38px ${withAlpha(accent, 0.35)}`
-                  : `0 0 28px ${withAlpha(accent, 0.18)}`
-            }}
-          >
-            {line}
-          </div>
-        ))}
-
-        <div
-          style={{
-            width: "88px",
-            height: "2px",
-            marginTop: "28px",
-            marginBottom: "24px",
-            alignSelf: isCentered ? "center" : "flex-start",
-            background: `linear-gradient(90deg, transparent, ${accent}, ${accentAlt}, transparent)`,
-            boxShadow: `0 0 16px ${withAlpha(accent, 0.6)}`
-          }}
-        />
-
-        {supportLines.map((line, index) => (
-          <div
-            key={`${line}-${index}`}
-            style={{
-              fontSize: `${getSupportSize(canvas)}px`,
-              lineHeight: 1.45,
-              color: "rgba(255,255,255,0.7)",
-              maxWidth: canvas.kind === "landscape" ? "540px" : "760px"
-            }}
-          >
-            {line}
-          </div>
-        ))}
-
+        <BackgroundLayers canvas={canvas} accent={accent} accentAlt={accentAlt} />
+        <CornerAccents canvas={canvas} accent={accent} />
         <div
           style={{
             display: "flex",
-            gap: canvas.kind === "landscape" ? "18px" : "24px",
             alignItems: "center",
-            justifyContent: isCentered ? "center" : "flex-start",
-            flexWrap: "wrap",
-            marginTop: "34px"
+            justifyContent: "space-between",
+            gap: "16px",
+            position: "relative",
+            zIndex: 2
           }}
         >
-          {buildStats(content).map((item, index, list) => (
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {logoDataUrl ? (
+              <img
+                src={logoDataUrl}
+                width={canvas.kind === "landscape" ? 34 : 40}
+                height={canvas.kind === "landscape" ? 34 : 40}
+                style={{ borderRadius: "10px" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: canvas.kind === "landscape" ? "34px" : "40px",
+                  height: canvas.kind === "landscape" ? "34px" : "40px",
+                  borderRadius: "10px",
+                  background: `linear-gradient(135deg, ${accent}, ${accentAlt})`,
+                  boxShadow: `0 0 20px ${withAlpha(accent, 0.45)}`
+                }}
+              />
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+              <div
+                style={{
+                  fontSize: canvas.kind === "landscape" ? "18px" : "20px",
+                  letterSpacing: "0.24em",
+                  textTransform: "uppercase"
+                }}
+              >
+                Erizon
+              </div>
+              <div
+                style={{
+                  fontSize: canvas.kind === "landscape" ? "10px" : "11px",
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.55)"
+                }}
+              >
+                Performance Intelligence
+              </div>
+            </div>
+          </div>
+          <div
+            style={{
+              padding: canvas.kind === "landscape" ? "8px 12px" : "8px 16px",
+              borderRadius: "999px",
+              border: `1px solid ${withAlpha(accent, 0.34)}`,
+              background: `linear-gradient(135deg, ${withAlpha(accent, 0.15)}, ${withAlpha(
+                accentAlt,
+                0.12
+              )})`,
+              color: accent,
+              fontSize: canvas.kind === "landscape" ? "10px" : "11px",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase"
+            }}
+          >
+            {buildBadge(content)}
+          </div>
+        </div>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: isCentered ? "center" : "flex-start",
+            justifyContent: "center",
+            textAlign: isCentered ? "center" : "left",
+            width: isCentered ? "100%" : canvas.kind === "landscape" ? "56%" : "100%",
+            maxWidth: isCentered ? "100%" : canvas.kind === "landscape" ? "620px" : "840px",
+            flex: 1
+          }}
+        >
+          <div
+            style={{
+              fontSize: canvas.kind === "story" ? "13px" : "12px",
+              letterSpacing: "0.24em",
+              textTransform: "uppercase",
+              color: accentAlt,
+              textShadow: `0 0 18px ${withAlpha(accentAlt, 0.7)}`,
+              marginBottom: "26px"
+            }}
+          >
+            {buildEyebrow(content, canvas)}
+          </div>
+          {hookLines.map((line, index) => (
             <div
-              key={item.label}
+              key={`${line}-${index}`}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: canvas.kind === "landscape" ? "18px" : "24px"
+                fontSize: `${titleSize}px`,
+                lineHeight: 1.03,
+                letterSpacing: "-0.05em",
+                color: index === hookLines.length - 1 ? "transparent" : "#FFFFFF",
+                background:
+                  index === hookLines.length - 1
+                    ? `linear-gradient(135deg, ${accent} 0%, ${accentAlt} 60%, #00F2FF 100%)`
+                    : undefined,
+                WebkitBackgroundClip: index === hookLines.length - 1 ? "text" : undefined,
+                textShadow:
+                  index === hookLines.length - 1
+                    ? `0 0 38px ${withAlpha(accent, 0.35)}`
+                    : `0 0 28px ${withAlpha(accent, 0.18)}`
               }}
             >
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
-                <div
-                  style={{
-                    fontSize: canvas.kind === "landscape" ? "22px" : "28px",
-                    color: index === 1 ? accentAlt : "#FFFFFF",
-                    textShadow: `0 0 24px ${withAlpha(index === 1 ? accentAlt : accent, 0.42)}`
-                  }}
-                >
-                  {item.value}
-                </div>
-                <div
-                  style={{
-                    fontSize: "11px",
-                    letterSpacing: "0.18em",
-                    textTransform: "uppercase",
-                    color: "rgba(255,255,255,0.42)"
-                  }}
-                >
-                  {item.label}
-                </div>
-              </div>
-              {index === list.length - 1 ? null : (
-                <div
-                  style={{
-                    width: "1px",
-                    height: canvas.kind === "landscape" ? "38px" : "46px",
-                    background: `linear-gradient(to bottom, transparent, ${withAlpha(accent, 0.42)}, transparent)`
-                  }}
-                />
-              )}
+              {line}
             </div>
           ))}
+          <div
+            style={{
+              width: "88px",
+              height: "2px",
+              marginTop: "28px",
+              marginBottom: "24px",
+              alignSelf: isCentered ? "center" : "flex-start",
+              background: `linear-gradient(90deg, transparent, ${accent}, ${accentAlt}, transparent)`,
+              boxShadow: `0 0 16px ${withAlpha(accent, 0.6)}`
+            }}
+          />
+          {supportLines.map((line, index) => (
+            <div
+              key={`${line}-${index}`}
+              style={{
+                fontSize: `${getSupportSize(canvas)}px`,
+                lineHeight: 1.45,
+                color: "rgba(255,255,255,0.7)",
+                maxWidth: canvas.kind === "landscape" ? "540px" : "760px"
+              }}
+            >
+              {line}
+            </div>
+          ))}
+          <div
+            style={{
+              display: "flex",
+              gap: canvas.kind === "landscape" ? "18px" : "24px",
+              alignItems: "center",
+              justifyContent: isCentered ? "center" : "flex-start",
+              flexWrap: "wrap",
+              marginTop: "34px"
+            }}
+          >
+            {buildStats(content).map((item, index, list) => (
+              <div
+                key={item.label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: canvas.kind === "landscape" ? "18px" : "24px"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: canvas.kind === "landscape" ? "22px" : "28px",
+                      color: index === 1 ? accentAlt : "#FFFFFF",
+                      textShadow: `0 0 24px ${withAlpha(
+                        index === 1 ? accentAlt : accent,
+                        0.42
+                      )}`
+                    }}
+                  >
+                    {item.value}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: "rgba(255,255,255,0.42)"
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                </div>
+                {index === list.length - 1 ? null : (
+                  <div
+                    style={{
+                      width: "1px",
+                      height: canvas.kind === "landscape" ? "38px" : "46px",
+                      background: `linear-gradient(to bottom, transparent, ${withAlpha(
+                        accent,
+                        0.42
+                      )}, transparent)`
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: isCentered ? "center" : "flex-start",
+            textAlign: isCentered ? "center" : "left",
+            gap: "10px"
+          }}
+        >
+          <div
+            style={{
+              fontSize: "12px",
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "rgba(255,255,255,0.48)"
+            }}
+          >
+            Decisao • Clareza • Lucro
+          </div>
+          <div
+            style={{
+              fontSize: canvas.kind === "landscape" ? "18px" : "22px",
+              lineHeight: 1.35,
+              color: "#FFFFFF",
+              maxWidth: canvas.kind === "landscape" ? "720px" : "820px"
+            }}
+          >
+            {cta}
+          </div>
+          <div
+            style={{
+              fontSize: canvas.kind === "landscape" ? "14px" : "16px",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: accent,
+              textShadow: `0 0 18px ${withAlpha(accent, 0.55)}`
+            }}
+          >
+            erizon.ai
+          </div>
+        </div>
+      </div>,
+      {
+        width: canvas.width,
+        height: canvas.height,
+        fonts: [
+          {
+            name: "Inter",
+            data: font,
+            weight: 800,
+            style: "normal"
+          }
+        ]
+      }
+    );
 
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: isCentered ? "center" : "flex-start",
-          textAlign: isCentered ? "center" : "left",
-          gap: "10px"
-        }}
-      >
-        <div
-          style={{
-            fontSize: "12px",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            color: "rgba(255,255,255,0.48)"
-          }}
-        >
-          Decisao • Clareza • Lucro
-        </div>
-        <div
-          style={{
-            fontSize: canvas.kind === "landscape" ? "18px" : "22px",
-            lineHeight: 1.35,
-            color: "#FFFFFF",
-            maxWidth: canvas.kind === "landscape" ? "720px" : "820px"
-          }}
-        >
-          {cta}
-        </div>
-        <div
-          style={{
-            fontSize: canvas.kind === "landscape" ? "14px" : "16px",
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: accent,
-            textShadow: `0 0 18px ${withAlpha(accent, 0.55)}`
-          }}
-        >
-          erizon.ai
-        </div>
-      </div>
-    </div>,
-    {
-      width: canvas.width,
-      height: canvas.height,
-      fonts: [
-        {
-          name: "Montserrat",
-          data: font,
-          weight: 900,
-          style: "normal"
-        }
-      ]
-    }
-  );
-
-  return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).png().toBuffer();
+  } catch {
+    return generateFallbackAsset(content, canvas, accent, accentAlt, logoDataUrl);
+  }
 }
 
 function BackgroundLayers({
@@ -768,6 +778,81 @@ function wrapText(text: string, maxChars: number, maxLines: number) {
   }
 
   return lines.slice(0, maxLines);
+}
+
+async function generateFallbackAsset(
+  content: ErizonContentOutput,
+  canvas: CanvasSpec,
+  accent: string,
+  accentAlt: string,
+  logoDataUrl: string | null
+) {
+  const hook = escapeXml(content.gancho);
+  const sub = escapeXml(truncate(content.ideia_central, 150));
+  const cta = escapeXml(truncate(content.cta, 90));
+  const badge = escapeXml(buildBadge(content));
+  const eyebrow = escapeXml(buildEyebrow(content, canvas));
+  const logoMarkup = logoDataUrl
+    ? `<image href="${logoDataUrl}" x="56" y="56" width="44" height="44" />`
+    : "";
+  const svg = `
+    <svg width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#08020f"/>
+          <stop offset="50%" stop-color="#0a0718"/>
+          <stop offset="100%" stop-color="#07111f"/>
+        </linearGradient>
+        <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${accent}"/>
+          <stop offset="55%" stop-color="${accentAlt}"/>
+          <stop offset="100%" stop-color="#00F2FF"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="26" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bg)"/>
+      <circle cx="${canvas.width / 2}" cy="${canvas.height / 2}" r="${Math.min(canvas.width, canvas.height) * 0.24}" fill="${accent}" opacity="0.22" filter="url(#glow)"/>
+      <circle cx="${canvas.width / 2}" cy="${canvas.height / 2}" r="${Math.min(canvas.width, canvas.height) * 0.32}" fill="none" stroke="${accent}" stroke-opacity="0.22"/>
+      <circle cx="${canvas.width / 2}" cy="${canvas.height / 2}" r="${Math.min(canvas.width, canvas.height) * 0.42}" fill="none" stroke="${accent}" stroke-opacity="0.10"/>
+      <rect x="28" y="28" width="${canvas.width - 56}" height="${canvas.height - 56}" rx="0" fill="none" stroke="${accent}" stroke-opacity="0.16"/>
+      ${logoMarkup}
+      <text x="${logoDataUrl ? 116 : 56}" y="84" fill="#FFFFFF" font-size="26" font-family="Arial, sans-serif" font-weight="700" letter-spacing="5">ERIZON</text>
+      <text x="${logoDataUrl ? 116 : 56}" y="106" fill="rgba(255,255,255,0.55)" font-size="11" font-family="Arial, sans-serif" letter-spacing="2">PERFORMANCE INTELLIGENCE</text>
+      <rect x="${canvas.width - 240}" y="54" width="184" height="40" rx="20" fill="${accent}" fill-opacity="0.10" stroke="${accent}" stroke-opacity="0.32"/>
+      <text x="${canvas.width - 148}" y="79" text-anchor="middle" fill="${accent}" font-size="12" font-family="Arial, sans-serif" letter-spacing="2">${badge}</text>
+      <text x="${canvas.kind === "landscape" ? 60 : canvas.width / 2}" y="${canvas.kind === "story" ? 200 : 170}" ${canvas.kind === "landscape" ? "" : 'text-anchor="middle"'} fill="${accentAlt}" font-size="14" font-family="Courier New, monospace" letter-spacing="3">${eyebrow}</text>
+      <foreignObject x="${canvas.kind === "landscape" ? 56 : 90}" y="${canvas.kind === "story" ? 240 : 220}" width="${canvas.kind === "landscape" ? 620 : canvas.width - 180}" height="${canvas.kind === "story" ? 820 : 520}">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;flex-direction:column;gap:18px;align-items:${canvas.kind === "landscape" || canvas.kind === "story" ? "flex-start" : "center"};text-align:${canvas.kind === "landscape" || canvas.kind === "story" ? "left" : "center"};color:white;font-family:Arial,sans-serif;">
+          <div style="font-size:${canvas.kind === "story" ? 94 : canvas.kind === "portrait" ? 82 : canvas.kind === "landscape" ? 72 : 84}px;line-height:1.02;font-weight:900;letter-spacing:-2px;">
+            <span style="color:white;">${hook.replace(/\n/g, "<br/>")}</span>
+          </div>
+          <div style="width:88px;height:2px;background:linear-gradient(90deg,transparent,${accent},${accentAlt},transparent);"></div>
+          <div style="font-size:${canvas.kind === "story" ? 28 : canvas.kind === "portrait" ? 26 : 22}px;line-height:1.45;color:rgba(255,255,255,0.78);">${sub}</div>
+        </div>
+      </foreignObject>
+      <text x="${canvas.kind === "landscape" || canvas.kind === "story" ? 60 : canvas.width / 2}" y="${canvas.height - 108}" ${canvas.kind === "landscape" || canvas.kind === "story" ? "" : 'text-anchor="middle"'} fill="rgba(255,255,255,0.50)" font-size="12" font-family="Courier New, monospace" letter-spacing="3">DECISAO • CLAREZA • LUCRO</text>
+      <foreignObject x="${canvas.kind === "landscape" || canvas.kind === "story" ? 56 : 90}" y="${canvas.height - 92}" width="${canvas.width - (canvas.kind === "landscape" || canvas.kind === "story" ? 112 : 180)}" height="56">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:${canvas.kind === "landscape" ? 18 : 20}px;line-height:1.3;color:white;font-family:Arial,sans-serif;text-align:${canvas.kind === "landscape" || canvas.kind === "story" ? "left" : "center"};">${cta}</div>
+      </foreignObject>
+    </svg>
+  `;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+function escapeXml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
 }
 
 function truncate(value: string, maxLength: number) {

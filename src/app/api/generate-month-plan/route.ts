@@ -17,6 +17,7 @@ const MONTHLY_BRIEFS: Array<{ topic: string; pillar: ContentPillar; format: Cont
 
 export async function POST() {
   let generated = 0;
+  const errors: string[] = [];
 
   for (const brief of MONTHLY_BRIEFS) {
     try {
@@ -28,10 +29,18 @@ export async function POST() {
       });
       await persistGeneratedContent({ ...content, canais_publicacao: ["instagram"] });
       generated++;
-    } catch {
-      // continue generating remaining posts
+    } catch (error) {
+      errors.push(
+        `${brief.topic.slice(0, 60)}: ${
+          error instanceof Error ? error.message : "falha desconhecida"
+        }`
+      );
     }
   }
 
-  return NextResponse.json({ generated });
+  return NextResponse.json({
+    generated,
+    failed: errors.length,
+    errors: errors.slice(0, 5)
+  });
 }
