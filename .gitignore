@@ -8,3 +8,4 @@ dist
 _upstream_repo
 
 .vercel
+.env*.local

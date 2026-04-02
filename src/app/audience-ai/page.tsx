@@ -1,12 +1,21 @@
-import { PlaceholderWorkspace } from "@/components/layout/PlaceholderWorkspace";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { TopHeader } from "@/components/dashboard/TopHeader";
+import { AudienceInsightsWorkspace } from "@/components/workspaces/AudienceInsightsWorkspace";
+import { navGroups } from "@/lib/command-center-data";
 
 export default function AudienceAiPage() {
   return (
-    <PlaceholderWorkspace
-      title="Audiencia IA"
-      subtitle="Leitura de audiencia, tensoes e padroes de resposta"
-      badge="Inteligencia"
-      copy="Espaco reservado para leitura de dores, gatilhos e oportunidades invisiveis na audiencia da Erizon."
-    />
+    <main className="command-center-shell">
+      <div className="command-center-grid command-center-grid--single">
+        <Sidebar groups={navGroups} />
+        <section className="main-shell">
+          <TopHeader
+            title="Audiencia IA"
+            subtitle="Leitura de audiencia, tensoes e padroes de resposta"
+          />
+          <AudienceInsightsWorkspace />
+        </section>
+      </div>
+    </main>
   );
 }
