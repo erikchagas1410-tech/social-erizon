@@ -73,7 +73,8 @@ export async function generateContentAction(
       topic,
       objective,
       pillar,
-      format
+      format,
+      channels
     });
     const enrichedContent: ErizonContentOutput = {
       ...content,

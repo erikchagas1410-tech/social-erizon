@@ -106,7 +106,7 @@ async function publishToLinkedIn(content: ErizonContentOutput) {
       specificContent: {
         "com.linkedin.ugc.ShareContent": {
           shareCommentary: {
-            text: truncate(`${content.gancho}\n\n${content.legenda}`, 3000)
+            text: truncate(buildPublishCaption(content, "linkedin"), 3000)
           },
           shareMediaCategory: "NONE",
           media: []
@@ -150,7 +150,7 @@ async function publishToInstagram(content: ErizonContentOutput) {
       },
       body: new URLSearchParams({
         image_url: content.asset_url_publicacao,
-        caption: truncate(`${content.gancho}\n\n${content.legenda}`, 2200),
+        caption: truncate(buildPublishCaption(content, "instagram"), 2200),
         access_token: accessToken
       }),
       cache: "no-store"
@@ -199,4 +199,45 @@ async function publishToInstagram(content: ErizonContentOutput) {
 
 function truncate(value: string, maxLength: number) {
   return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
+}
+
+function buildPublishCaption(
+  content: ErizonContentOutput,
+  channel: PublicationChannel
+) {
+  const tags = normalizeHashtags(content.hashtags);
+  const tagLimit = channel === "linkedin" ? 4 : 10;
+  const selectedTags = tags.slice(0, tagLimit).map((tag) => `#${tag}`);
+  const hasInlineHashtag = /(^|\s)#\w+/m.test(content.legenda);
+  const body = `${content.gancho}\n\n${content.legenda}`.trim();
+
+  if (hasInlineHashtag || !selectedTags.length) {
+    return body;
+  }
+
+  return `${body}\n\n${selectedTags.join(" ")}`;
+}
+
+function normalizeHashtags(hashtags: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const hashtag of hashtags) {
+    const normalized = hashtag.replace(/^#+/, "").replace(/\s+/g, "").trim();
+
+    if (!normalized) {
+      continue;
+    }
+
+    const key = normalized.toLowerCase();
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    result.push(normalized);
+  }
+
+  return result;
 }

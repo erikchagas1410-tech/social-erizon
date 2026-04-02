@@ -20,7 +20,12 @@ export async function POST() {
 
   for (const brief of MONTHLY_BRIEFS) {
     try {
-      const content = await generateErizonContent({ topic: brief.topic, pillar: brief.pillar, format: brief.format });
+      const content = await generateErizonContent({
+        topic: brief.topic,
+        pillar: brief.pillar,
+        format: brief.format,
+        channels: ["instagram"]
+      });
       await persistGeneratedContent({ ...content, canais_publicacao: ["instagram"] });
       generated++;
     } catch {

@@ -7,253 +7,303 @@ import satori from "satori";
 
 import { ErizonContentOutput } from "@/types/content";
 
+type CanvasSpec = {
+  width: number;
+  height: number;
+  kind: "square" | "portrait" | "story" | "landscape";
+};
+
 let fontCache: ArrayBuffer | null = null;
 let logoCache: string | null = null;
 
-const FONT_SUPABASE_PATH = "data/inter-extrabold.woff";
+const FONT_SUPABASE_PATH = "data/montserrat-black.woff";
 const FONT_GOOGLE_CSS_URL =
-  "https://fonts.googleapis.com/css?family=Inter:800&subset=latin";
+  "https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap";
 
 export async function generateErizonAsset(content: ErizonContentOutput) {
   const font = await loadFont();
   const logoDataUrl = loadLogoDataUrl();
-
+  const canvas = selectCanvasSpec(content);
   const accent = pickAccent(content.pilar);
-  const hookLines = wrapText(content.gancho, 22, 4);
-  const subLines = wrapText(content.ideia_central, 34, 3);
+  const accentAlt = pickAccentAlt(content.pilar);
+  const hookLines = wrapText(content.gancho, lineLimit(canvas, "hook"), 4);
+  const supportLines = wrapText(content.ideia_central, lineLimit(canvas, "support"), 3);
+  const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 110);
+  const isCentered = shouldUseCenteredLayout(content, canvas);
+  const titleSize = getTitleSize(canvas, hookLines.length);
 
   const svg = await satori(
-    (
+    <div
+      style={{
+        width: `${canvas.width}px`,
+        height: `${canvas.height}px`,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        position: "relative",
+        overflow: "hidden",
+        background: "linear-gradient(160deg, #08020f 0%, #0a0718 45%, #07111f 100%)",
+        color: "#FFFFFF",
+        padding: getPadding(canvas),
+        fontFamily: "Montserrat"
+      }}
+    >
+      <BackgroundLayers canvas={canvas} accent={accent} accentAlt={accentAlt} />
+      <CornerAccents canvas={canvas} accent={accent} />
+
       <div
         style={{
-          width: "1080px",
-          height: "1080px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "16px",
+          position: "relative",
+          zIndex: 2
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {logoDataUrl ? (
+            <img
+              src={logoDataUrl}
+              width={canvas.kind === "landscape" ? 34 : 40}
+              height={canvas.kind === "landscape" ? 34 : 40}
+              style={{ borderRadius: "10px" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: canvas.kind === "landscape" ? "34px" : "40px",
+                height: canvas.kind === "landscape" ? "34px" : "40px",
+                borderRadius: "10px",
+                background: `linear-gradient(135deg, ${accent}, ${accentAlt})`,
+                boxShadow: `0 0 20px ${withAlpha(accent, 0.45)}`
+              }}
+            />
+          )}
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            <div
+              style={{
+                fontSize: canvas.kind === "landscape" ? "18px" : "20px",
+                letterSpacing: "0.24em",
+                textTransform: "uppercase"
+              }}
+            >
+              Erizon
+            </div>
+            <div
+              style={{
+                fontSize: canvas.kind === "landscape" ? "10px" : "11px",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.55)"
+              }}
+            >
+              Performance Intelligence
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            padding: canvas.kind === "landscape" ? "8px 12px" : "8px 16px",
+            borderRadius: "999px",
+            border: `1px solid ${withAlpha(accent, 0.34)}`,
+            background: `linear-gradient(135deg, ${withAlpha(accent, 0.15)}, ${withAlpha(
+              accentAlt,
+              0.12
+            )})`,
+            color: accent,
+            fontSize: canvas.kind === "landscape" ? "10px" : "11px",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase"
+          }}
+        >
+          {buildBadge(content)}
+        </div>
+      </div>
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
-          background:
-            "radial-gradient(circle at top right, rgba(108,43,255,0.22), transparent 28%), linear-gradient(160deg, #07080f 0%, #0b1021 55%, #05070d 100%)",
-          color: "#edf2ff",
-          padding: "72px",
-          position: "relative",
-          overflow: "hidden",
-          fontFamily: "Inter"
+          alignItems: isCentered ? "center" : "flex-start",
+          justifyContent: "center",
+          textAlign: isCentered ? "center" : "left",
+          width: isCentered ? "100%" : canvas.kind === "landscape" ? "56%" : "100%",
+          maxWidth: isCentered ? "100%" : canvas.kind === "landscape" ? "620px" : "840px",
+          flex: 1
         }}
       >
         <div
           style={{
-            position: "absolute",
-            inset: "0",
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
-            backgroundSize: "54px 54px",
-            opacity: 0.42
+            fontSize: canvas.kind === "story" ? "13px" : "12px",
+            letterSpacing: "0.24em",
+            textTransform: "uppercase",
+            color: accentAlt,
+            textShadow: `0 0 18px ${withAlpha(accentAlt, 0.7)}`,
+            marginBottom: "26px"
           }}
-        />
+        >
+          {buildEyebrow(content, canvas)}
+        </div>
+
+        {hookLines.map((line, index) => (
+          <div
+            key={`${line}-${index}`}
+            style={{
+              fontSize: `${titleSize}px`,
+              lineHeight: 1.03,
+              letterSpacing: "-0.05em",
+              color: index === hookLines.length - 1 ? "transparent" : "#FFFFFF",
+              background:
+                index === hookLines.length - 1
+                  ? `linear-gradient(135deg, ${accent} 0%, ${accentAlt} 60%, #00F2FF 100%)`
+                  : undefined,
+              WebkitBackgroundClip: index === hookLines.length - 1 ? "text" : undefined,
+              textShadow:
+                index === hookLines.length - 1
+                  ? `0 0 38px ${withAlpha(accent, 0.35)}`
+                  : `0 0 28px ${withAlpha(accent, 0.18)}`
+            }}
+          >
+            {line}
+          </div>
+        ))}
+
         <div
           style={{
-            position: "absolute",
-            top: "-80px",
-            right: "-120px",
-            width: "420px",
-            height: "420px",
-            borderRadius: "999px",
-            background: `radial-gradient(circle, ${withAlpha(accent, 0.35)} 0%, transparent 68%)`
+            width: "88px",
+            height: "2px",
+            marginTop: "28px",
+            marginBottom: "24px",
+            alignSelf: isCentered ? "center" : "flex-start",
+            background: `linear-gradient(90deg, transparent, ${accent}, ${accentAlt}, transparent)`,
+            boxShadow: `0 0 16px ${withAlpha(accent, 0.6)}`
           }}
         />
-        <div
-          style={{
-            position: "absolute",
-            left: "72px",
-            right: "72px",
-            top: "72px",
-            height: "3px",
-            background: `linear-gradient(90deg, transparent, ${accent}, transparent)`
-          }}
-        />
+
+        {supportLines.map((line, index) => (
+          <div
+            key={`${line}-${index}`}
+            style={{
+              fontSize: `${getSupportSize(canvas)}px`,
+              lineHeight: 1.45,
+              color: "rgba(255,255,255,0.7)",
+              maxWidth: canvas.kind === "landscape" ? "540px" : "760px"
+            }}
+          >
+            {line}
+          </div>
+        ))}
 
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            gap: canvas.kind === "landscape" ? "18px" : "24px",
             alignItems: "center",
-            position: "relative",
-            zIndex: 1
+            justifyContent: isCentered ? "center" : "flex-start",
+            flexWrap: "wrap",
+            marginTop: "34px"
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              alignItems: "center"
-            }}
-          >
-            {logoDataUrl ? (
-              <img
-                src={logoDataUrl}
-                width={42}
-                height={42}
-                style={{ borderRadius: "10px" }}
-              />
-            ) : null}
-
+          {buildStats(content).map((item, index, list) => (
             <div
+              key={item.label}
               style={{
                 display: "flex",
-                flexDirection: "column"
+                alignItems: "center",
+                gap: canvas.kind === "landscape" ? "18px" : "24px"
               }}
             >
-              <div
-                style={{
-                  fontSize: "18px",
-                  letterSpacing: "0.36em",
-                  color: accent,
-                  fontWeight: 800
-                }}
-              >
-                ERIZON
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
+                <div
+                  style={{
+                    fontSize: canvas.kind === "landscape" ? "22px" : "28px",
+                    color: index === 1 ? accentAlt : "#FFFFFF",
+                    textShadow: `0 0 24px ${withAlpha(index === 1 ? accentAlt : accent, 0.42)}`
+                  }}
+                >
+                  {item.value}
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "0.18em",
+                    textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.42)"
+                  }}
+                >
+                  {item.label}
+                </div>
               </div>
-              <div
-                style={{
-                  fontSize: "12px",
-                  letterSpacing: "0.18em",
-                  color: "rgba(237,242,255,0.55)"
-                }}
-              >
-                SOCIAL AI
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              padding: "8px 16px",
-              borderRadius: "999px",
-              border: `1px solid ${withAlpha(accent, 0.4)}`,
-              background: withAlpha(accent, 0.12),
-              color: accent,
-              fontSize: "14px",
-              letterSpacing: "0.22em",
-              fontWeight: 800
-            }}
-          >
-            {pillarLabel(content.pilar)}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "14px",
-            position: "relative",
-            zIndex: 1,
-            paddingTop: "40px",
-            flex: 1,
-            justifyContent: "center"
-          }}
-        >
-          {hookLines.map((line) => (
-            <div
-              key={line}
-              style={{
-                fontSize: hookLines.length > 2 ? "82px" : "98px",
-                lineHeight: 0.98,
-                letterSpacing: "-0.06em",
-                fontWeight: 800,
-                maxWidth: "880px"
-              }}
-            >
-              {line}
+              {index === list.length - 1 ? null : (
+                <div
+                  style={{
+                    width: "1px",
+                    height: canvas.kind === "landscape" ? "38px" : "46px",
+                    background: `linear-gradient(to bottom, transparent, ${withAlpha(accent, 0.42)}, transparent)`
+                  }}
+                />
+              )}
             </div>
           ))}
-
-          <div
-            style={{
-              width: "88px",
-              height: "3px",
-              background: accent,
-              marginTop: "20px",
-              marginBottom: "14px"
-            }}
-          />
-
-          {subLines.map((line) => (
-            <div
-              key={line}
-              style={{
-                fontSize: "28px",
-                lineHeight: 1.3,
-                color: "rgba(237,242,255,0.72)",
-                fontWeight: 700,
-                maxWidth: "860px"
-              }}
-            >
-              {line}
-            </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            gap: "20px",
-            position: "relative",
-            zIndex: 1
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              maxWidth: "720px"
-            }}
-          >
-            <div
-              style={{
-                fontSize: "16px",
-                letterSpacing: "0.24em",
-                color: "rgba(237,242,255,0.45)"
-              }}
-            >
-              DECISAO • CLAREZA • LUCRO
-            </div>
-            <div
-              style={{
-                fontSize: "22px",
-                lineHeight: 1.3,
-                color: "rgba(237,242,255,0.88)",
-                fontWeight: 700
-              }}
-            >
-              {truncate(content.cta, 96)}
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontSize: "18px",
-              letterSpacing: "0.24em",
-              color: accent,
-              fontWeight: 800
-            }}
-          >
-            ERIZON.AI
-          </div>
         </div>
       </div>
-    ),
+
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: isCentered ? "center" : "flex-start",
+          textAlign: isCentered ? "center" : "left",
+          gap: "10px"
+        }}
+      >
+        <div
+          style={{
+            fontSize: "12px",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "rgba(255,255,255,0.48)"
+          }}
+        >
+          Decisao • Clareza • Lucro
+        </div>
+        <div
+          style={{
+            fontSize: canvas.kind === "landscape" ? "18px" : "22px",
+            lineHeight: 1.35,
+            color: "#FFFFFF",
+            maxWidth: canvas.kind === "landscape" ? "720px" : "820px"
+          }}
+        >
+          {cta}
+        </div>
+        <div
+          style={{
+            fontSize: canvas.kind === "landscape" ? "14px" : "16px",
+            letterSpacing: "0.22em",
+            textTransform: "uppercase",
+            color: accent,
+            textShadow: `0 0 18px ${withAlpha(accent, 0.55)}`
+          }}
+        >
+          erizon.ai
+        </div>
+      </div>
+    </div>,
     {
-      width: 1080,
-      height: 1080,
+      width: canvas.width,
+      height: canvas.height,
       fonts: [
         {
-          name: "Inter",
+          name: "Montserrat",
           data: font,
-          weight: 800,
+          weight: 900,
           style: "normal"
         }
       ]
@@ -261,6 +311,300 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
   );
 
   return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+function BackgroundLayers({
+  canvas,
+  accent,
+  accentAlt
+}: {
+  canvas: CanvasSpec;
+  accent: string;
+  accentAlt: string;
+}) {
+  const ringBase = canvas.kind === "landscape" ? 420 : canvas.kind === "story" ? 520 : 460;
+
+  return (
+    <>
+      <div
+        style={{
+          position: "absolute",
+          inset: "0",
+          backgroundImage: `linear-gradient(${withAlpha(accent, 0.07)} 1px, transparent 1px), linear-gradient(90deg, ${withAlpha(accent, 0.07)} 1px, transparent 1px)`,
+          backgroundSize: canvas.kind === "landscape" ? "44px 44px" : "56px 56px"
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          top: canvas.kind === "landscape" ? "-110px" : "-140px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: canvas.kind === "story" ? "620px" : "520px",
+          height: canvas.kind === "story" ? "480px" : "420px",
+          borderRadius: "999px",
+          background: `radial-gradient(circle, ${withAlpha(accent, 0.42)} 0%, transparent 72%)`,
+          filter: "blur(34px)"
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: canvas.kind === "landscape" ? "-110px" : "-120px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: canvas.kind === "story" ? "760px" : "620px",
+          height: canvas.kind === "story" ? "360px" : "280px",
+          borderRadius: "999px",
+          background: `radial-gradient(circle, ${withAlpha(accentAlt, 0.3)} 0%, transparent 74%)`,
+          filter: "blur(38px)"
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          width: canvas.kind === "landscape" ? "520px" : canvas.kind === "story" ? "860px" : "620px",
+          height: canvas.kind === "landscape" ? "520px" : canvas.kind === "story" ? "860px" : "620px",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          borderRadius: "999px",
+          background: `radial-gradient(circle at 40% 35%, ${withAlpha(accent, 0.3)} 0%, ${withAlpha(
+            accentAlt,
+            0.16
+          )} 35%, rgba(0,242,255,0.08) 58%, transparent 74%)`
+        }}
+      />
+      {[0, 1, 2].map((index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            width: `${ringBase + index * 180}px`,
+            height: `${ringBase + index * 180}px`,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            borderRadius: "999px",
+            border: `1px solid ${withAlpha(accent, 0.28 - index * 0.09)}`
+          }}
+        />
+      ))}
+      {[
+        ["18%", "18%", accentAlt, 34],
+        ["80%", "26%", accent, -24],
+        ["22%", "78%", accent, -36],
+        ["82%", "70%", accentAlt, 28]
+      ].map(([left, top, color, rotate], index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            left: String(left),
+            top: String(top),
+            width: "2px",
+            height: "58px",
+            borderRadius: "2px",
+            background: `linear-gradient(to bottom, ${withAlpha(String(color), 0.95)}, transparent)`,
+            transform: `rotate(${rotate}deg)`
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function CornerAccents({
+  canvas,
+  accent
+}: {
+  canvas: CanvasSpec;
+  accent: string;
+}) {
+  const inset = canvas.kind === "landscape" ? 24 : 34;
+  const size = canvas.kind === "landscape" ? 32 : 40;
+
+  return (
+    <>
+      {[
+        { top: inset, left: inset, borderTop: true, borderLeft: true },
+        { top: inset, right: inset, borderTop: true, borderRight: true },
+        { bottom: inset, left: inset, borderBottom: true, borderLeft: true },
+        { bottom: inset, right: inset, borderBottom: true, borderRight: true }
+      ].map((corner, index) => (
+        <div
+          key={index}
+          style={{
+            position: "absolute",
+            width: `${size}px`,
+            height: `${size}px`,
+            ...corner,
+            borderTop: corner.borderTop ? `2px solid ${withAlpha(accent, 0.58)}` : undefined,
+            borderRight: corner.borderRight ? `2px solid ${withAlpha(accent, 0.58)}` : undefined,
+            borderBottom: corner.borderBottom ? `2px solid ${withAlpha(accent, 0.58)}` : undefined,
+            borderLeft: corner.borderLeft ? `2px solid ${withAlpha(accent, 0.58)}` : undefined
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+function selectCanvasSpec(content: ErizonContentOutput): CanvasSpec {
+  const channels = content.canais_publicacao ?? [];
+  const onlyInstagram = channels.length > 0 && channels.every((channel) => channel === "instagram");
+  const onlyLinkedIn = channels.length > 0 && channels.every((channel) => channel === "linkedin");
+
+  if (looksLikeStory(content)) {
+    return { width: 1080, height: 1920, kind: "story" };
+  }
+
+  if (content.formato === "carrossel" || content.formato === "comparacao" || content.formato === "checklist") {
+    return { width: 1080, height: 1080, kind: "square" };
+  }
+
+  if (onlyLinkedIn) {
+    if (content.formato === "analise" || content.formato === "insight_estrategico") {
+      return { width: 1200, height: 627, kind: "landscape" };
+    }
+
+    return { width: 1200, height: 1500, kind: "portrait" };
+  }
+
+  if (onlyInstagram) {
+    return { width: 1080, height: 1350, kind: "portrait" };
+  }
+
+  return { width: 1080, height: 1080, kind: "square" };
+}
+
+function shouldUseCenteredLayout(content: ErizonContentOutput, canvas: CanvasSpec) {
+  if (canvas.kind === "story") {
+    return false;
+  }
+
+  if (canvas.kind === "landscape") {
+    return false;
+  }
+
+  return !["comparacao", "analise", "checklist", "mini_aula", "insight_estrategico"].includes(
+    content.formato
+  );
+}
+
+function looksLikeStory(content: ErizonContentOutput) {
+  const base = `${content.formato} ${content.estrutura_criativo} ${content.prompt_imagem}`.toLowerCase();
+  return base.includes("story") || base.includes("stories") || base.includes("9:16");
+}
+
+function buildBadge(content: ErizonContentOutput) {
+  if (content.formato === "carrossel") {
+    return "Carousel";
+  }
+
+  if (content.canais_publicacao?.includes("linkedin") && !content.canais_publicacao.includes("instagram")) {
+    return "LinkedIn";
+  }
+
+  return pillarLabel(content.pilar);
+}
+
+function buildEyebrow(content: ErizonContentOutput, canvas: CanvasSpec) {
+  const channelLabel = content.canais_publicacao?.includes("instagram")
+    ? content.canais_publicacao.includes("linkedin")
+      ? "Instagram + LinkedIn"
+      : "Instagram"
+    : content.canais_publicacao?.includes("linkedin")
+      ? "LinkedIn"
+      : canvas.kind === "story"
+        ? "Instagram Stories"
+        : "Social Post";
+
+  return `${channelLabel} // ${formatLabel(content.formato)}`;
+}
+
+function buildStats(content: ErizonContentOutput) {
+  return [
+    { value: pillarLabel(content.pilar).slice(0, 8), label: "Pilar" },
+    { value: formatLabel(content.formato).slice(0, 12), label: "Formato" },
+    { value: content.sugestao_horario || "18:00", label: "Horario" }
+  ];
+}
+
+function formatLabel(format: ErizonContentOutput["formato"]) {
+  return format.replaceAll("_", " ");
+}
+
+function pillarLabel(pillar: ErizonContentOutput["pilar"]) {
+  return pillar.replaceAll("_", " ").toUpperCase();
+}
+
+function getPadding(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "landscape":
+      return "34px 42px 30px";
+    case "story":
+      return "92px 60px 72px";
+    case "portrait":
+      return "76px 68px 64px";
+    default:
+      return "72px 72px 64px";
+  }
+}
+
+function getTitleSize(canvas: CanvasSpec, lineCount: number) {
+  if (canvas.kind === "story") {
+    return lineCount > 3 ? 92 : 108;
+  }
+
+  if (canvas.kind === "portrait") {
+    return lineCount > 3 ? 86 : 102;
+  }
+
+  if (canvas.kind === "landscape") {
+    return lineCount > 3 ? 72 : 84;
+  }
+
+  return lineCount > 3 ? 80 : 94;
+}
+
+function getSupportSize(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "story":
+      return 28;
+    case "portrait":
+      return 26;
+    case "landscape":
+      return 20;
+    default:
+      return 24;
+  }
+}
+
+function lineLimit(canvas: CanvasSpec, type: "hook" | "support") {
+  if (type === "hook") {
+    switch (canvas.kind) {
+      case "story":
+        return 12;
+      case "portrait":
+        return 14;
+      case "landscape":
+        return 16;
+      default:
+        return 15;
+    }
+  }
+
+  switch (canvas.kind) {
+    case "story":
+      return 22;
+    case "portrait":
+      return 30;
+    case "landscape":
+      return 28;
+    default:
+      return 28;
+  }
 }
 
 async function loadFont(): Promise<ArrayBuffer> {
@@ -317,6 +661,8 @@ async function loadFont(): Promise<ArrayBuffer> {
 
 function loadLocalFont(): ArrayBuffer | null {
   const candidatePaths = [
+    path.resolve(process.cwd(), "public/fonts/montserrat-black.woff"),
+    path.resolve(process.cwd(), "public/fonts/montserrat-black.ttf"),
     path.resolve(process.cwd(), "public/fonts/inter-extrabold.woff"),
     path.resolve(process.cwd(), "public/fonts/inter-extrabold.ttf")
   ];
@@ -402,10 +748,7 @@ function loadLogoDataUrl() {
 }
 
 function wrapText(text: string, maxChars: number, maxLines: number) {
-  const words = text
-    .replace(/\s+/g, " ")
-    .trim()
-    .split(" ");
+  const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   const lines: string[] = [];
   let current = "";
 
@@ -427,31 +770,38 @@ function wrapText(text: string, maxChars: number, maxLines: number) {
   return lines.slice(0, maxLines);
 }
 
+function truncate(value: string, maxLength: number) {
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
+}
+
 function pickAccent(pillar: ErizonContentOutput["pilar"]) {
   switch (pillar) {
-    case "autoridade":
-      return "#6C2BFF";
     case "educacao":
-      return "#00E5FF";
+      return "#00F2FF";
     case "desejo":
-      return "#7C3AED";
+      return "#FF00E5";
     case "conexao":
       return "#38BDF8";
     case "prova":
-      return "#22D3EE";
-    case "conversao_indireta":
-      return "#8B5CF6";
+      return "#7C3AED";
     default:
-      return "#6C2BFF";
+      return "#BC13FE";
   }
 }
 
-function pillarLabel(pillar: ErizonContentOutput["pilar"]) {
-  return pillar.replaceAll("_", " ").toUpperCase();
-}
-
-function truncate(value: string, maxLength: number) {
-  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
+function pickAccentAlt(pillar: ErizonContentOutput["pilar"]) {
+  switch (pillar) {
+    case "educacao":
+      return "#BC13FE";
+    case "desejo":
+      return "#FF4488";
+    case "conexao":
+      return "#BC13FE";
+    case "prova":
+      return "#00F2FF";
+    default:
+      return "#00F2FF";
+  }
 }
 
 function withAlpha(hex: string, alpha: number) {

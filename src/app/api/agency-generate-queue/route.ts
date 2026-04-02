@@ -56,7 +56,8 @@ export async function POST(req: NextRequest) {
     const content = await generateErizonContent({
       topic: brief.topic,
       pillar: brief.pillar,
-      format: brief.format
+      format: brief.format,
+      channels: ["instagram"]
     });
 
     await persistGeneratedContent({

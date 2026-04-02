@@ -1,5 +1,10 @@
 import { erizonBrand } from "@/lib/erizon-brand";
-import { ContentFormat, ContentPillar, ErizonContentOutput } from "@/types/content";
+import {
+  ContentFormat,
+  ContentPillar,
+  ErizonContentOutput,
+  PublicationChannel
+} from "@/types/content";
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -9,6 +14,7 @@ type GenerateContentParams = {
   objective?: string;
   pillar?: ContentPillar | "";
   format?: ContentFormat | "";
+  channels?: PublicationChannel[];
 };
 
 type GroqResponse = {
@@ -87,17 +93,28 @@ function buildSystemPrompt() {
 }
 
 function buildUserPrompt(params: GenerateContentParams) {
+  const channels = params.channels?.length
+    ? params.channels.join(", ")
+    : "instagram, linkedin";
+
   return [
     "Crie uma peca de conteudo para Instagram da Erizon em JSON valido.",
     `Tema principal: ${params.topic}.`,
     params.objective ? `Objetivo do conteudo: ${params.objective}.` : "",
     params.pillar ? `Pilar obrigatorio: ${params.pillar}.` : "",
     params.format ? `Formato obrigatorio: ${params.format}.` : "",
+    `Canais previstos: ${channels}.`,
+    `Guia de formatos Instagram: feed retrato ${erizonBrand.platformGuidelines.instagram.recommendedFeedPortrait}, quadrado ${erizonBrand.platformGuidelines.instagram.square}, paisagem ${erizonBrand.platformGuidelines.instagram.landscape}, stories/reels ${erizonBrand.platformGuidelines.instagram.storiesAndReels}.`,
+    `Guia de formatos LinkedIn: quadrado ${erizonBrand.platformGuidelines.linkedin.postSquare}, retrato ${erizonBrand.platformGuidelines.linkedin.postPortrait}, paisagem/link ${erizonBrand.platformGuidelines.linkedin.linkLandscape}.`,
     "Use exatamente estes campos:",
     "titulo_interno, objetivo, pilar, formato, ideia_central, angulo, gancho, estrutura_criativo, texto_criativo, legenda, cta, prompt_imagem, alt_text, hashtags, sugestao_horario, justificativa, hipotese_performance.",
-    "hashtags deve ser array de strings sem #.",
+    "hashtags deve ser array de strings sem #, entre 6 e 12 itens, misturando marca, categoria, dor, beneficio e intencao.",
     "sugestao_horario deve ser HH:MM.",
     "texto_criativo, legenda e prompt_imagem precisam estar prontos para uso.",
+    "legenda deve vir pronta para postagem, com quebra de linhas, desenvolvimento forte, CTA final e hashtags estrategicas no final.",
+    "Para Instagram, a legenda pode ser mais emocional e com 6 a 10 hashtags. Para LinkedIn, mais densa, mais intelectual e com 3 a 5 hashtags.",
+    "prompt_imagem deve instruir um layout premium da Erizon com fundo escuro, grid tecnico, glow neon roxo/magenta/ciano, tipografia principal pesada estilo Montserrat, apoio em sans limpa e microcopy em mono.",
+    "estrutura_criativo deve descrever claramente a composicao visual, hierarquia, callouts, stats e o formato ideal do canvas.",
     "A ideia central deve falar de dinheiro, decisao, risco, escala, lucro ou perda evitada.",
     "Se nao houver pilar ou formato obrigatorio, escolha a melhor opcao para performance e consistencia de marca."
   ]

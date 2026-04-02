@@ -144,7 +144,8 @@ export async function generateMonthPlan() {
       topic: brief.topic,
       objective: brief.objective,
       pillar: brief.pillar,
-      format: brief.format
+      format: brief.format,
+      channels: ["linkedin", "instagram"]
     });
 
     await persistGeneratedContent({
