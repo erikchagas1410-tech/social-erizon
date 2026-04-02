@@ -33,6 +33,8 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
     const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 110);
     const isCentered = shouldUseCenteredLayout(content, canvas);
     const titleSize = getTitleSize(canvas, hookLines.length);
+    const contentJustify = getContentJustify(canvas);
+    const contentPaddingTop = getContentPaddingTop(canvas);
 
     const svg = await satori(
       <div
@@ -128,11 +130,12 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
             display: "flex",
             flexDirection: "column",
             alignItems: isCentered ? "center" : "flex-start",
-            justifyContent: "center",
+            justifyContent: contentJustify,
             textAlign: isCentered ? "center" : "left",
             width: isCentered ? "100%" : canvas.kind === "landscape" ? "56%" : "100%",
             maxWidth: isCentered ? "100%" : canvas.kind === "landscape" ? "620px" : "840px",
-            flex: 1
+            flex: 1,
+            paddingTop: contentPaddingTop
           }}
         >
           <div
@@ -578,6 +581,32 @@ function getTitleSize(canvas: CanvasSpec, lineCount: number) {
   return lineCount > 3 ? 80 : 94;
 }
 
+function getContentJustify(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "landscape":
+      return "center";
+    case "story":
+      return "flex-start";
+    case "portrait":
+      return "flex-start";
+    default:
+      return "flex-start";
+  }
+}
+
+function getContentPaddingTop(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "story":
+      return "52px";
+    case "portrait":
+      return "26px";
+    case "square":
+      return "16px";
+    default:
+      return "0px";
+  }
+}
+
 function getSupportSize(canvas: CanvasSpec) {
   switch (canvas.kind) {
     case "story":
@@ -792,6 +821,7 @@ async function generateFallbackAsset(
   const cta = escapeXml(truncate(content.cta, 90));
   const badge = escapeXml(buildBadge(content));
   const eyebrow = escapeXml(buildEyebrow(content, canvas));
+  const heroTop = getFallbackHeroTop(canvas);
   const logoMarkup = logoDataUrl
     ? `<image href="${logoDataUrl}" x="56" y="56" width="44" height="44" />`
     : "";
@@ -826,8 +856,8 @@ async function generateFallbackAsset(
       <text x="${logoDataUrl ? 116 : 56}" y="106" fill="rgba(255,255,255,0.55)" font-size="11" font-family="Arial, sans-serif" letter-spacing="2">PERFORMANCE INTELLIGENCE</text>
       <rect x="${canvas.width - 240}" y="54" width="184" height="40" rx="20" fill="${accent}" fill-opacity="0.10" stroke="${accent}" stroke-opacity="0.32"/>
       <text x="${canvas.width - 148}" y="79" text-anchor="middle" fill="${accent}" font-size="12" font-family="Arial, sans-serif" letter-spacing="2">${badge}</text>
-      <text x="${canvas.kind === "landscape" ? 60 : canvas.width / 2}" y="${canvas.kind === "story" ? 200 : 170}" ${canvas.kind === "landscape" ? "" : 'text-anchor="middle"'} fill="${accentAlt}" font-size="14" font-family="Courier New, monospace" letter-spacing="3">${eyebrow}</text>
-      <foreignObject x="${canvas.kind === "landscape" ? 56 : 90}" y="${canvas.kind === "story" ? 240 : 220}" width="${canvas.kind === "landscape" ? 620 : canvas.width - 180}" height="${canvas.kind === "story" ? 820 : 520}">
+      <text x="${canvas.kind === "landscape" ? 60 : canvas.width / 2}" y="${heroTop - 34}" ${canvas.kind === "landscape" ? "" : 'text-anchor="middle"'} fill="${accentAlt}" font-size="14" font-family="Courier New, monospace" letter-spacing="3">${eyebrow}</text>
+      <foreignObject x="${canvas.kind === "landscape" ? 56 : 90}" y="${heroTop}" width="${canvas.kind === "landscape" ? 620 : canvas.width - 180}" height="${canvas.kind === "story" ? 820 : 520}">
         <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;flex-direction:column;gap:18px;align-items:${canvas.kind === "landscape" || canvas.kind === "story" ? "flex-start" : "center"};text-align:${canvas.kind === "landscape" || canvas.kind === "story" ? "left" : "center"};color:white;font-family:Arial,sans-serif;">
           <div style="font-size:${canvas.kind === "story" ? 94 : canvas.kind === "portrait" ? 82 : canvas.kind === "landscape" ? 72 : 84}px;line-height:1.02;font-weight:900;letter-spacing:-2px;">
             <span style="color:white;">${hook.replace(/\n/g, "<br/>")}</span>
@@ -844,6 +874,19 @@ async function generateFallbackAsset(
   `;
 
   return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+function getFallbackHeroTop(canvas: CanvasSpec) {
+  switch (canvas.kind) {
+    case "story":
+      return 250;
+    case "portrait":
+      return 150;
+    case "square":
+      return 130;
+    default:
+      return 220;
+  }
 }
 
 function escapeXml(value: string) {
