@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import React from "react";
 import sharp from "sharp";
 import satori from "satori";
 
@@ -13,451 +12,471 @@ type CanvasSpec = {
   kind: "square" | "portrait" | "story" | "landscape";
 };
 
+type CardTemplate = {
+  bg: string;
+  accent: string;
+  text: string;
+  tagBg: string;
+  tagColor: string;
+  tagBorder: string;
+};
+
 let fontCache: ArrayBuffer | null = null;
-let logoCache: string | null = null;
+
+const FONT_SUPABASE_PATH = "data/inter-extrabold.woff";
+const FONT_GOOGLE_CSS_URL =
+  "https://fonts.googleapis.com/css?family=Inter:800&subset=latin";
+
+const CARD_TEMPLATES: CardTemplate[] = [
+  { bg: "linear-gradient(155deg,#0B0112 0%,#1C0035 100%)", accent: "#BC13FE", text: "#FFFFFF", tagBg: "rgba(188,19,254,0.18)", tagColor: "#BC13FE", tagBorder: "1px solid rgba(188,19,254,0.5)" },
+  { bg: "linear-gradient(155deg,#001A22 0%,#003D55 100%)", accent: "#00F2FF", text: "#FFFFFF", tagBg: "rgba(0,242,255,0.14)", tagColor: "#00F2FF", tagBorder: "1px solid rgba(0,242,255,0.4)" },
+  { bg: "linear-gradient(155deg,#120010 0%,#280028 100%)", accent: "#FF00E5", text: "#FFFFFF", tagBg: "rgba(255,0,229,0.14)", tagColor: "#FF00E5", tagBorder: "1px solid rgba(255,0,229,0.4)" },
+  { bg: "linear-gradient(155deg,#001208 0%,#00280F 100%)", accent: "#00FF88", text: "#FFFFFF", tagBg: "rgba(0,255,136,0.12)", tagColor: "#00FF88", tagBorder: "1px solid rgba(0,255,136,0.35)" },
+  { bg: "linear-gradient(155deg,#140800 0%,#2D1500 100%)", accent: "#FFB800", text: "#FFFFFF", tagBg: "rgba(255,184,0,0.14)", tagColor: "#FFB800", tagBorder: "1px solid rgba(255,184,0,0.4)" },
+  { bg: "linear-gradient(155deg,#140008 0%,#280018 100%)", accent: "#FF3366", text: "#FFFFFF", tagBg: "rgba(255,51,102,0.14)", tagColor: "#FF3366", tagBorder: "1px solid rgba(255,51,102,0.4)" },
+  { bg: "linear-gradient(155deg,#080D1E 0%,#101A3A 100%)", accent: "#7B9FFF", text: "#FFFFFF", tagBg: "rgba(123,159,255,0.14)", tagColor: "#7B9FFF", tagBorder: "1px solid rgba(123,159,255,0.4)" },
+  { bg: "#000000", accent: "#FFFFFF", text: "#FFFFFF", tagBg: "rgba(255,255,255,0.08)", tagColor: "rgba(255,255,255,0.9)", tagBorder: "1px solid rgba(255,255,255,0.25)" }
+];
+
+const PILLAR_LABELS: Record<string, string> = {
+  autoridade: "AUTORIDADE",
+  educacao: "EDUCACAO",
+  desejo: "DESEJO",
+  conexao: "CONEXAO",
+  prova: "PROVA",
+  conversao_indireta: "CONVERSAO"
+};
 
 export async function generateErizonAsset(content: ErizonContentOutput) {
   const canvas = selectCanvasSpec(content);
-  const accent = pickAccent(content.pilar);
-  const accentAlt = pickAccentAlt(content.pilar);
-  const logoDataUrl = loadLogoDataUrl();
+  const templateIndex = chooseTemplateIndex(content);
+  const template = CARD_TEMPLATES[templateIndex];
 
   try {
     const font = await loadFont();
-    const svg = await satori(buildArtwork(content, canvas, accent, accentAlt, logoDataUrl), {
+    const svg = await satori(buildCardTree(content, canvas, template, templateIndex) as any, {
       width: canvas.width,
       height: canvas.height,
-      fonts: [
-        {
-          name: "ErizonSans",
-          data: font,
-          weight: 700,
-          style: "normal"
-        }
-      ]
+      fonts: [{ name: "Inter", data: font, weight: 800, style: "normal" }]
     });
 
     return sharp(Buffer.from(svg)).png().toBuffer();
   } catch {
-    const svg = buildFallbackSvg(content, canvas, accent, accentAlt, logoDataUrl);
+    const svg = buildFallbackSvg(content, canvas, template);
     return sharp(Buffer.from(svg)).png().toBuffer();
   }
 }
 
-function buildArtwork(
-  content: ErizonContentOutput,
-  canvas: CanvasSpec,
-  accent: string,
-  accentAlt: string,
-  logoDataUrl: string | null
-) {
-  const hookLines = wrapText(content.gancho, getHookLineLimit(canvas), getHookMaxLines(canvas));
-  const supportLines = wrapText(content.ideia_central, getSupportLineLimit(canvas), 3);
-  const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 96);
-  const badge = buildBadge(content);
-  const eyebrow = buildEyebrow(content, canvas);
-
-  return (
-    <div
-      style={{
-        width: `${canvas.width}px`,
-        height: `${canvas.height}px`,
-        display: "flex",
-        position: "relative",
-        overflow: "hidden",
-        background:
-          "linear-gradient(160deg, #05040b 0%, #0a0718 50%, #06111c 100%)",
-        color: "#f6f7fb",
-        fontFamily: "ErizonSans"
-      }}
-    >
-      <div
-        style={{
-          position: "absolute",
-          inset: "0",
-          display: "flex",
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
-          backgroundSize: `${canvas.kind === "story" ? 72 : 54}px ${canvas.kind === "story" ? 72 : 54}px`,
-          opacity: 0.55
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          top: canvas.kind === "story" ? "-160px" : "-100px",
-          right: canvas.kind === "landscape" ? "-80px" : "-120px",
-          width: canvas.kind === "story" ? "520px" : "420px",
-          height: canvas.kind === "story" ? "520px" : "420px",
-          display: "flex",
-          borderRadius: "999px",
-          background: `radial-gradient(circle, ${withAlpha(accent, 0.5)} 0%, ${withAlpha(
-            accent,
-            0.16
-          )} 38%, transparent 72%)`
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          bottom: canvas.kind === "story" ? "-140px" : "-120px",
-          left: canvas.kind === "landscape" ? "58%" : "-120px",
-          width: canvas.kind === "story" ? "560px" : "420px",
-          height: canvas.kind === "story" ? "560px" : "420px",
-          display: "flex",
-          borderRadius: "999px",
-          background: `radial-gradient(circle, ${withAlpha(accentAlt, 0.35)} 0%, ${withAlpha(
-            accentAlt,
-            0.1
-          )} 42%, transparent 72%)`
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          inset: getInset(canvas, 26),
-          display: "flex",
-          borderRadius: "34px",
-          border: `1px solid ${withAlpha(accent, 0.28)}`
-        }}
-      />
-
-      <div
-        style={{
-          position: "absolute",
-          top: `${getOuterPadding(canvas) - 18}px`,
-          left: `${getOuterPadding(canvas)}px`,
-          right: `${getOuterPadding(canvas)}px`,
-          height: "3px",
-          display: "flex",
-          background: `linear-gradient(90deg, transparent 0%, ${accent} 18%, ${accentAlt} 72%, transparent 100%)`
-        }}
-      />
-
-      <div
-        style={{
-          position: "relative",
-          zIndex: 2,
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: `${getOuterPadding(canvas)}px`
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between"
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px"
-            }}
-          >
-            {logoDataUrl ? (
-              <img
-                src={logoDataUrl}
-                width={canvas.kind === "story" ? 60 : 48}
-                height={canvas.kind === "story" ? 60 : 48}
-                style={{ borderRadius: "14px" }}
-              />
-            ) : null}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "6px"
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  color: "#ffffff",
-                  fontSize: `${canvas.kind === "story" ? 28 : 22}px`,
-                  letterSpacing: "0.22em",
-                  fontWeight: 700
-                }}
-              >
-                ERIZON
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  color: withAlpha("#ffffff", 0.62),
-                  fontSize: `${canvas.kind === "story" ? 14 : 11}px`,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase"
-                }}
-              >
-                Agency OS // Performance Intelligence
-              </div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              padding: canvas.kind === "story" ? "12px 22px" : "10px 18px",
-              borderRadius: "999px",
-              border: `1px solid ${withAlpha(accent, 0.42)}`,
-              background: withAlpha(accent, 0.12),
-              color: accent,
-              fontSize: `${canvas.kind === "story" ? 16 : 13}px`,
-              letterSpacing: "0.16em",
-              textTransform: "uppercase"
-            }}
-          >
-            {badge}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            flex: 1,
-            gap: canvas.kind === "story" ? "24px" : "20px",
-            paddingTop: canvas.kind === "story" ? "36px" : "28px",
-            paddingBottom: canvas.kind === "story" ? "32px" : "22px"
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              color: accentAlt,
-              fontSize: `${canvas.kind === "story" ? 18 : 13}px`,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase"
-            }}
-          >
-            {eyebrow}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: canvas.kind === "story" ? "8px" : "6px",
-              maxWidth: `${getHeadlineWidth(canvas)}px`
-            }}
-          >
-            {hookLines.map((line, index) => (
-              <div
-                key={`${line}-${index}`}
-                style={{
-                  display: "flex",
-                  color: index === hookLines.length - 1 ? accentAlt : "#ffffff",
-                  fontSize: `${getHeadlineSize(canvas, hookLines.length)}px`,
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.055em",
-                  fontWeight: 700
-                }}
-              >
-                {line}
-              </div>
-            ))}
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              width: `${canvas.kind === "story" ? 132 : 96}px`,
-              height: "4px",
-              background: `linear-gradient(90deg, ${accent} 0%, ${accentAlt} 100%)`,
-              borderRadius: "999px"
-            }}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: canvas.kind === "story" ? "10px" : "8px",
-              maxWidth: `${getSupportWidth(canvas)}px`
-            }}
-          >
-            {supportLines.map((line, index) => (
-              <div
-                key={`${line}-${index}`}
-                style={{
-                  display: "flex",
-                  color: withAlpha("#ffffff", 0.82),
-                  fontSize: `${getSupportSize(canvas)}px`,
-                  lineHeight: 1.22,
-                  fontWeight: 700
-                }}
-              >
-                {line}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: canvas.kind === "landscape" ? "row" : "column",
-            justifyContent: "space-between",
-            alignItems: canvas.kind === "landscape" ? "flex-end" : "flex-start",
-            gap: "18px"
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              maxWidth: `${canvas.kind === "landscape" ? 620 : getSupportWidth(canvas)}px`
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                color: withAlpha("#ffffff", 0.5),
-                fontSize: `${canvas.kind === "story" ? 16 : 12}px`,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase"
-              }}
-            >
-              Clareza • Ação • Resultado
-            </div>
-            <div
-              style={{
-                display: "flex",
-                color: "#ffffff",
-                fontSize: `${canvas.kind === "story" ? 28 : canvas.kind === "landscape" ? 22 : 20}px`,
-                lineHeight: 1.15,
-                fontWeight: 700
-              }}
-            >
-              {cta}
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              color: accent,
-              fontSize: `${canvas.kind === "story" ? 22 : 18}px`,
-              letterSpacing: "0.18em",
-              textTransform: "uppercase"
-            }}
-          >
-            ERIZON.AI
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 async function loadFont(): Promise<ArrayBuffer> {
-  if (fontCache) {
+  if (fontCache) return fontCache;
+
+  const localFont = loadLocalFont();
+  if (localFont) {
+    fontCache = localFont;
     return fontCache;
   }
 
-  const font = loadLocalFont();
-  if (!font) {
-    throw new Error("Nenhuma fonte local encontrada para o renderer.");
+  const cachedSupabaseFont = await loadFontFromSupabase();
+  if (cachedSupabaseFont) {
+    fontCache = cachedSupabaseFont;
+    return fontCache;
   }
 
-  fontCache = font;
+  fontCache = await fetchFontFromGoogle();
+  void cacheFontInSupabase(fontCache);
   return fontCache;
 }
 
 function loadLocalFont(): ArrayBuffer | null {
   const candidates = [
     path.resolve(process.cwd(), "public/fonts/inter-extrabold.woff"),
-    path.resolve(process.cwd(), "public/fonts/inter-extrabold.ttf"),
-    "C:/Windows/Fonts/arialbd.ttf",
-    "C:/Windows/Fonts/ARIALBD.TTF",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+    path.resolve(process.cwd(), "public/fonts/inter-extrabold.ttf")
   ];
 
-  for (const candidatePath of candidates) {
-    if (fs.existsSync(candidatePath)) {
-      return Uint8Array.from(fs.readFileSync(candidatePath)).buffer;
-    }
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return Uint8Array.from(fs.readFileSync(candidate)).buffer;
   }
 
   return null;
 }
 
-function buildFallbackSvg(
+async function loadFontFromSupabase(): Promise<ArrayBuffer | null> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || "erizon-media";
+
+  if (!supabaseUrl || !supabaseKey) return null;
+
+  try {
+    const response = await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${FONT_SUPABASE_PATH}`, {
+      headers: { Authorization: `Bearer ${supabaseKey}` },
+      cache: "force-cache"
+    });
+    if (!response.ok) return null;
+    return await response.arrayBuffer();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFontFromGoogle(): Promise<ArrayBuffer> {
+  const cssResponse = await fetch(FONT_GOOGLE_CSS_URL, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)"
+    },
+    cache: "force-cache"
+  });
+  if (!cssResponse.ok) throw new Error(`Falha ao carregar CSS da fonte: HTTP ${cssResponse.status}`);
+
+  const css = await cssResponse.text();
+  const match =
+    css.match(/src:\s*url\(([^)]+\.woff[^2)][^)]*)\)/) ??
+    css.match(/src:\s*url\(([^)]+)\)/);
+  const fontUrl = match?.[1];
+  if (!fontUrl) throw new Error("Nao foi possivel extrair a URL da fonte Inter.");
+
+  const fontResponse = await fetch(fontUrl, { cache: "force-cache" });
+  if (!fontResponse.ok) throw new Error(`Falha ao baixar a fonte: HTTP ${fontResponse.status}`);
+  return await fontResponse.arrayBuffer();
+}
+
+async function cacheFontInSupabase(font: ArrayBuffer) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || "erizon-media";
+
+  if (!supabaseUrl || !supabaseKey) return;
+
+  try {
+    await fetch(`${supabaseUrl}/storage/v1/object/${bucket}/${FONT_SUPABASE_PATH}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${supabaseKey}`,
+        "Content-Type": "font/woff",
+        "x-upsert": "true"
+      },
+      body: Buffer.from(font),
+      cache: "no-store"
+    });
+  } catch {}
+}
+
+function buildCardTree(
   content: ErizonContentOutput,
   canvas: CanvasSpec,
-  accent: string,
-  accentAlt: string,
-  logoDataUrl: string | null
+  template: CardTemplate,
+  templateIndex: number
 ) {
-  const hookLines = wrapText(content.gancho, getHookLineLimit(canvas), getHookMaxLines(canvas));
-  const supportLines = wrapText(content.ideia_central, getSupportLineLimit(canvas), 3);
-  const cta = truncate(content.cta, canvas.kind === "landscape" ? 84 : 96);
-  const outer = getOuterPadding(canvas);
-  const titleY = canvas.kind === "story" ? 300 : canvas.kind === "portrait" ? 250 : canvas.kind === "landscape" ? 210 : 220;
-  const titleSize = getHeadlineSize(canvas, hookLines.length);
-  const supportSize = getSupportSize(canvas);
-  const titleBlock = hookLines
-    .map((line, index) => {
-      const y = titleY + index * Math.round(titleSize * 0.98);
-      const fill = index === hookLines.length - 1 ? accentAlt : "#FFFFFF";
-      return `<text x="${outer}" y="${y}" fill="${fill}" font-size="${titleSize}" font-family="Arial, Helvetica, sans-serif" font-weight="800">${escapeXml(line)}</text>`;
-    })
-    .join("");
-  const supportStartY = titleY + hookLines.length * Math.round(titleSize * 0.98) + 70;
-  const supportBlock = supportLines
-    .map((line, index) => {
-      const y = supportStartY + index * Math.round(supportSize * 1.35);
-      return `<text x="${outer}" y="${y}" fill="rgba(255,255,255,0.82)" font-size="${supportSize}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(line)}</text>`;
-    })
-    .join("");
+  const title = wrapWords(content.gancho, getHookMaxChars(canvas, content), getHookMaxLines(canvas, content));
+  const sub = extractSubLines(content.ideia_central, getSubMaxChars(canvas), 2);
+  const footer = truncate(content.cta, canvas.kind === "landscape" ? 72 : 92);
+  const pillarLabel = PILLAR_LABELS[content.pilar] || content.pilar.toUpperCase();
+  const padding = getPadding(canvas);
+  const layout = pickLayout(content, templateIndex);
+  const titleSize = getTitleSize(canvas, title.length, layout);
+  const bodySize = canvas.kind === "story" ? 28 : canvas.kind === "landscape" ? 22 : 26;
+
+  const children =
+    layout === "stats"
+      ? buildStatsLayout(content, title, pillarLabel, template, canvas)
+      : layout === "checklist"
+        ? buildChecklistLayout(content, title, pillarLabel, template, canvas)
+        : layout === "left"
+          ? buildLeftLayout(title, sub, pillarLabel, footer, template, canvas, titleSize, bodySize)
+          : layout === "center"
+            ? buildCenterLayout(title, sub, pillarLabel, footer, template, canvas, titleSize, bodySize)
+            : buildHeroLayout(title, sub, pillarLabel, footer, template, canvas, titleSize, bodySize);
+
+  return {
+    type: "div",
+    props: {
+      style: {
+        width: `${canvas.width}px`,
+        height: `${canvas.height}px`,
+        display: "flex",
+        flexDirection: "column",
+        background: template.bg,
+        padding: `${padding}px`,
+        fontFamily: "Inter",
+        position: "relative",
+        overflow: "hidden"
+      },
+      children: [
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              inset: "0",
+              display: "flex",
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+              backgroundSize: `${canvas.kind === "story" ? 68 : 54}px ${canvas.kind === "story" ? 68 : 54}px`,
+              opacity: 0.5
+            }
+          }
+        },
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              top: canvas.kind === "story" ? "-120px" : "-70px",
+              right: canvas.kind === "landscape" ? "-80px" : "-40px",
+              width: canvas.kind === "story" ? "340px" : "220px",
+              height: canvas.kind === "story" ? "340px" : "220px",
+              borderRadius: "999px",
+              background: withAlpha(template.accent, 0.32),
+              display: "flex"
+            }
+          }
+        },
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              left: canvas.kind === "landscape" ? "64%" : "-70px",
+              bottom: canvas.kind === "story" ? "-120px" : "-90px",
+              width: canvas.kind === "story" ? "360px" : "240px",
+              height: canvas.kind === "story" ? "360px" : "240px",
+              borderRadius: "999px",
+              background: withAlpha(template.accent, 0.14),
+              display: "flex"
+            }
+          }
+        },
+        ...children
+      ]
+    }
+  };
+}
+
+function buildHeroLayout(title: string[], sub: string[], pillarLabel: string, footer: string, template: CardTemplate, canvas: CanvasSpec, titleSize: number, bodySize: number) {
+  return [
+    edgeBars(template, canvas),
+    { type: "div", props: { style: { display: "flex", alignItems: "center", marginBottom: canvas.kind === "story" ? 54 : 40 }, children: [badge(pillarLabel, template, canvas)] } },
+    {
+      type: "div",
+      props: {
+        style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "10px" },
+        children: [
+          ...title.map((line) => textLine(line, template.text, titleSize)),
+          ...(sub.length ? [accentRule(template.accent, canvas), ...sub.map((line) => textLine(line, "rgba(255,255,255,0.64)", bodySize))] : [])
+        ]
+      }
+    },
+    footerRow(template, footer, canvas)
+  ];
+}
+
+function buildLeftLayout(title: string[], sub: string[], pillarLabel: string, footer: string, template: CardTemplate, canvas: CanvasSpec, titleSize: number, bodySize: number) {
+  return [
+    { type: "div", props: { style: { position: "absolute", left: "0", top: "0", bottom: "0", width: canvas.kind === "story" ? "16px" : "12px", background: template.accent, display: "flex" } } },
+    {
+      type: "div",
+      props: {
+        style: { display: "flex", alignItems: "center", gap: "14px", marginBottom: canvas.kind === "story" ? 46 : 36 },
+        children: [
+          { type: "div", props: { style: { width: "3px", height: "26px", background: template.accent, display: "flex" } } },
+          { type: "div", props: { style: { color: template.tagColor, fontSize: `${canvas.kind === "story" ? 20 : 17}px`, fontWeight: "700", letterSpacing: "4px" }, children: pillarLabel } }
+        ]
+      }
+    },
+    {
+      type: "div",
+      props: {
+        style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "10px" },
+        children: [
+          ...title.map((line, index) => textLine(line, index === 0 ? template.text : "rgba(255,255,255,0.88)", index === 0 ? titleSize + 2 : titleSize - 8)),
+          ...(sub.length ? [accentRule(template.accent, canvas), ...sub.map((line) => textLine(line, "rgba(255,255,255,0.62)", bodySize - 2))] : [])
+        ]
+      }
+    },
+    { type: "div", props: { style: { height: "2px", background: `linear-gradient(90deg,${template.accent},transparent)`, marginBottom: "22px", display: "flex" } } },
+    footerRow(template, footer, canvas)
+  ];
+}
+
+function buildCenterLayout(title: string[], sub: string[], pillarLabel: string, footer: string, template: CardTemplate, canvas: CanvasSpec, titleSize: number, bodySize: number) {
+  const centeredTitle = title.length > 2 ? titleSize - 8 : titleSize;
+  return [
+    cornerBox(template.accent, 40, 40, 40, 3, 0.12),
+    cornerBox(template.accent, 80, 50, 90, 4, 0.24, true),
+    cornerBox(template.accent, 60, 50, 70, 4, 0.18, false, true),
+    {
+      type: "div",
+      props: {
+        style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "14px" },
+        children: [
+          pillBadge(pillarLabel, template, canvas),
+          ...title.map((line) => centeredTextLine(line, template.text, centeredTitle)),
+          ...(sub.length ? [accentRule(template.accent, canvas), ...sub.map((line) => centeredTextLine(line, "rgba(255,255,255,0.62)", bodySize - 2))] : [])
+        ]
+      }
+    },
+    centeredFooter(template, footer, canvas)
+  ];
+}
+
+function buildStatsLayout(content: ErizonContentOutput, title: string[], pillarLabel: string, template: CardTemplate, canvas: CanvasSpec) {
+  const stats = [
+    { value: pillarLabel.slice(0, 8), label: "PILAR" },
+    { value: formatLabel(content.formato).slice(0, 10).toUpperCase(), label: "FORMATO" },
+    { value: (content.sugestao_horario || "18:00").slice(0, 5), label: "HORARIO" }
+  ];
+
+  return [
+    edgeBars(template, canvas),
+    { type: "div", props: { style: { display: "flex", alignItems: "center", marginBottom: "32px" }, children: [badge(pillarLabel, template, canvas)] } },
+    { type: "div", props: { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "32px" }, children: title.map((line) => textLine(line, template.text, canvas.kind === "landscape" ? 50 : 62)) } },
+    { type: "div", props: { style: { height: "2px", background: `linear-gradient(90deg,${template.accent},transparent)`, marginBottom: "28px", display: "flex" } } },
+    {
+      type: "div",
+      props: {
+        style: { display: "flex", flex: 1, gap: "18px", alignItems: "stretch" },
+        children: stats.map((stat) => ({
+          type: "div",
+          props: {
+            style: {
+              flex: 1,
+              background: template.tagBg,
+              border: template.tagBorder,
+              borderRadius: "12px",
+              padding: "18px 12px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px"
+            },
+            children: [
+              centeredTextLine(stat.value, template.accent, canvas.kind === "landscape" ? 44 : 58),
+              centeredTextLine(stat.label, "rgba(255,255,255,0.55)", 18)
+            ]
+          }
+        }))
+      }
+    },
+    footerRow(template, truncate(content.cta, 60), canvas)
+  ];
+}
+
+function buildChecklistLayout(content: ErizonContentOutput, title: string[], pillarLabel: string, template: CardTemplate, canvas: CanvasSpec) {
+  const items = extractChecklistItems(content.ideia_central);
+
+  return [
+    { type: "div", props: { style: { position: "absolute", left: "0", top: "0", bottom: "0", width: canvas.kind === "story" ? "16px" : "10px", background: `linear-gradient(180deg,${template.accent},transparent,${template.accent})`, display: "flex" } } },
+    {
+      type: "div",
+      props: {
+        style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "30px" },
+        children: [
+          { type: "div", props: { style: { width: "3px", height: "22px", background: template.accent, display: "flex" } } },
+          { type: "div", props: { style: { color: template.tagColor, fontSize: "16px", fontWeight: "700", letterSpacing: "4px" }, children: pillarLabel } }
+        ]
+      }
+    },
+    { type: "div", props: { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "28px" }, children: title.map((line) => textLine(line, template.text, canvas.kind === "landscape" ? 48 : 60)) } },
+    accentRule(template.accent, canvas),
+    {
+      type: "div",
+      props: {
+        style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "18px" },
+        children: items.map((item) => ({
+          type: "div",
+          props: {
+            style: { display: "flex", alignItems: "flex-start", gap: "14px" },
+            children: [
+              { type: "div", props: { style: { width: "8px", height: "8px", background: template.accent, borderRadius: "2px", marginTop: "10px", flexShrink: 0, display: "flex" } } },
+              { type: "div", props: { style: { color: "rgba(255,255,255,0.82)", fontSize: `${canvas.kind === "landscape" ? 22 : 26}px`, fontWeight: "800", lineHeight: "1.3" }, children: item } }
+            ]
+          }
+        }))
+      }
+    },
+    footerRow(template, truncate(content.cta, 66), canvas)
+  ];
+}
+
+function edgeBars(template: CardTemplate, canvas: CanvasSpec) {
+  return {
+    type: "div",
+    props: {
+      children: [
+        { type: "div", props: { style: { position: "absolute", top: "0", left: "0", right: "0", height: canvas.kind === "story" ? "10px" : "8px", background: `linear-gradient(90deg,transparent,${template.accent},transparent)`, display: "flex" } } },
+        { type: "div", props: { style: { position: "absolute", bottom: "0", left: "0", right: "0", height: canvas.kind === "story" ? "10px" : "8px", background: `linear-gradient(90deg,${template.accent},transparent,${template.accent})`, display: "flex" } } }
+      ]
+    }
+  };
+}
+
+function badge(label: string, template: CardTemplate, canvas: CanvasSpec) {
+  return { type: "div", props: { style: { background: template.tagBg, border: template.tagBorder, borderRadius: "6px", padding: canvas.kind === "story" ? "8px 22px" : "6px 18px", color: template.tagColor, fontSize: `${canvas.kind === "story" ? 22 : 18}px`, fontWeight: "700", letterSpacing: "3px" }, children: label } };
+}
+
+function pillBadge(label: string, template: CardTemplate, canvas: CanvasSpec) {
+  return { type: "div", props: { style: { background: template.tagBg, border: template.tagBorder, borderRadius: "999px", padding: canvas.kind === "story" ? "10px 26px" : "8px 24px", color: template.tagColor, fontSize: `${canvas.kind === "story" ? 20 : 18}px`, fontWeight: "700", letterSpacing: "4px" }, children: label } };
+}
+
+function accentRule(accent: string, canvas: CanvasSpec) {
+  return { type: "div", props: { style: { height: "2px", width: `${canvas.kind === "story" ? 84 : 60}px`, background: accent, marginTop: "18px", marginBottom: "16px", display: "flex" } } };
+}
+
+function textLine(line: string, color: string, fontSize: number) {
+  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.04", letterSpacing: "-1px" }, children: line } };
+}
+
+function centeredTextLine(line: string, color: string, fontSize: number) {
+  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.04", letterSpacing: "-1px", textAlign: "center", justifyContent: "center", display: "flex" }, children: line } };
+}
+
+function footerRow(template: CardTemplate, footer: string, canvas: CanvasSpec) {
+  return { type: "div", props: { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: canvas.kind === "story" ? "34px" : "24px" }, children: [{ type: "div", props: { style: { color: "rgba(255,255,255,0.3)", fontSize: `${canvas.kind === "story" ? 20 : 18}px`, letterSpacing: "5px" }, children: "erizon.ai" } }, { type: "div", props: { style: { color: template.accent, fontSize: `${canvas.kind === "story" ? 22 : 20}px`, fontWeight: "700", letterSpacing: "3px" }, children: footer } }] } };
+}
+
+function centeredFooter(template: CardTemplate, footer: string, canvas: CanvasSpec) {
+  return { type: "div", props: { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "16px" }, children: [{ type: "div", props: { style: { height: "2px", width: "48px", background: template.accent, display: "flex" } } }, { type: "div", props: { style: { color: "rgba(255,255,255,0.4)", fontSize: `${canvas.kind === "story" ? 22 : 20}px`, letterSpacing: "5px" }, children: footer } }, { type: "div", props: { style: { height: "2px", width: "48px", background: template.accent, display: "flex" } } }] } };
+}
+
+function cornerBox(accent: string, size: number, top?: number, offset?: number, borderWidth = 4, opacity = 0.2, right = false, bottom = false) {
+  return { type: "div", props: { style: { position: "absolute", width: `${size}px`, height: `${size}px`, border: `${borderWidth}px solid ${accent}`, borderRadius: "8px", opacity, display: "flex", ...(right ? { right: `${offset ?? 50}px` } : { left: `${offset ?? 50}px` }), ...(bottom ? { bottom: `${top ?? 50}px` } : { top: `${top ?? 50}px` }) } } };
+}
+
+function buildFallbackSvg(content: ErizonContentOutput, canvas: CanvasSpec, template: CardTemplate) {
+  const title = wrapWords(content.gancho, getHookMaxChars(canvas, content), getHookMaxLines(canvas, content));
+  const sub = extractSubLines(content.ideia_central, getSubMaxChars(canvas), 2);
+  const padding = getPadding(canvas);
+  const titleSize = getTitleSize(canvas, title.length, "hero");
+  const footer = truncate(content.cta, canvas.kind === "landscape" ? 72 : 92);
+  const titleSvg = title.map((line, index) => `<text x="${padding}" y="${padding + 120 + index * Math.round(titleSize * 1.02)}" fill="${template.text}" font-size="${titleSize}" font-family="Arial, Helvetica, sans-serif" font-weight="800">${escapeXml(line)}</text>`).join("");
+  const subStart = padding + 120 + title.length * Math.round(titleSize * 1.02) + 48;
+  const subSvg = sub.map((line, index) => `<text x="${padding}" y="${subStart + index * 34}" fill="rgba(255,255,255,0.64)" font-size="26" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(line)}</text>`).join("");
 
   return `
     <svg width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#05040b"/>
-          <stop offset="50%" stop-color="#0a0718"/>
-          <stop offset="100%" stop-color="#06111c"/>
-        </linearGradient>
-        <pattern id="grid" width="${canvas.kind === "story" ? 72 : 54}" height="${canvas.kind === "story" ? 72 : 54}" patternUnits="userSpaceOnUse">
-          <path d="M ${canvas.kind === "story" ? 72 : 54} 0 L 0 0 0 ${canvas.kind === "story" ? 72 : 54}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#bg)"/>
-      <rect width="100%" height="100%" fill="url(#grid)"/>
-      <circle cx="${canvas.width - outer * 0.7}" cy="${outer * 1.1}" r="${canvas.kind === "story" ? 270 : 210}" fill="${withAlpha(accent, 0.28)}"/>
-      <circle cx="${outer * 0.6}" cy="${canvas.height - outer * 0.2}" r="${canvas.kind === "story" ? 300 : 220}" fill="${withAlpha(accentAlt, 0.18)}"/>
-      <rect x="${outer - 16}" y="${outer - 16}" width="${canvas.width - (outer - 16) * 2}" height="${canvas.height - (outer - 16) * 2}" rx="28" fill="none" stroke="${withAlpha(accent, 0.3)}"/>
-      <rect x="${outer}" y="${outer - 18}" width="${canvas.width - outer * 2}" height="3" fill="${accent}"/>
-      ${logoDataUrl ? `<image href="${logoDataUrl}" x="${outer}" y="${outer}" width="48" height="48" />` : ""}
-      <text x="${outer + (logoDataUrl ? 64 : 0)}" y="${outer + 22}" fill="#FFFFFF" font-size="24" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="4">ERIZON</text>
-      <text x="${outer + (logoDataUrl ? 64 : 0)}" y="${outer + 42}" fill="rgba(255,255,255,0.58)" font-size="11" font-family="Arial, Helvetica, sans-serif">AGENCY OS // PERFORMANCE INTELLIGENCE</text>
-      <text x="${outer}" y="${titleY - 42}" fill="${accentAlt}" font-size="${canvas.kind === "story" ? 18 : 13}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(
-        buildEyebrow(content, canvas)
-      )}</text>
-      ${titleBlock}
-      <rect x="${outer}" y="${supportStartY - 32}" width="${canvas.kind === "story" ? 132 : 96}" height="4" rx="2" fill="${accent}"/>
-      ${supportBlock}
-      <text x="${outer}" y="${canvas.height - outer - 42}" fill="rgba(255,255,255,0.5)" font-size="${canvas.kind === "story" ? 16 : 12}" font-family="Arial, Helvetica, sans-serif" font-weight="700">CLAREZA • ACAO • RESULTADO</text>
-      <text x="${outer}" y="${canvas.height - outer - 12}" fill="#FFFFFF" font-size="${canvas.kind === "story" ? 28 : canvas.kind === "landscape" ? 22 : 20}" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(
-        cta
-      )}</text>
-      <text x="${outer}" y="${canvas.height - outer + 18}" fill="${accent}" font-size="${canvas.kind === "story" ? 22 : 18}" font-family="Arial, Helvetica, sans-serif" font-weight="800" letter-spacing="3">ERIZON.AI</text>
+      <rect width="100%" height="100%" fill="${template.bg.startsWith("#") ? template.bg : "#0B0112"}"/>
+      <circle cx="${canvas.width - 80}" cy="80" r="${canvas.kind === "story" ? 170 : 110}" fill="${withAlpha(template.accent, 0.28)}"/>
+      <rect x="0" y="0" width="${canvas.width}" height="8" fill="${template.accent}"/>
+      <rect x="0" y="${canvas.height - 8}" width="${canvas.width}" height="8" fill="${template.accent}"/>
+      <text x="${padding}" y="${padding}" fill="${template.tagColor}" font-size="18" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(PILLAR_LABELS[content.pilar] || content.pilar.toUpperCase())}</text>
+      ${titleSvg}
+      ${subSvg}
+      <text x="${padding}" y="${canvas.height - padding}" fill="${template.accent}" font-size="20" font-family="Arial, Helvetica, sans-serif" font-weight="700">${escapeXml(footer)}</text>
     </svg>
   `;
+}
+
+function chooseTemplateIndex(content: ErizonContentOutput) {
+  const seed = `${content.gancho}|${content.pilar}|${content.formato}`;
+  return seed.split("").reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % CARD_TEMPLATES.length, 0);
+}
+
+function pickLayout(content: ErizonContentOutput, templateIndex: number) {
+  if (["analise", "insight_estrategico"].includes(content.formato)) return "stats";
+  if (["checklist", "comparacao", "mini_aula"].includes(content.formato)) return "checklist";
+  return ["hero", "left", "center"][templateIndex % 3] as "hero" | "left" | "center";
 }
 
 function selectCanvasSpec(content: ErizonContentOutput): CanvasSpec {
@@ -465,26 +484,11 @@ function selectCanvasSpec(content: ErizonContentOutput): CanvasSpec {
   const onlyInstagram = channels.length > 0 && channels.every((channel) => channel === "instagram");
   const onlyLinkedIn = channels.length > 0 && channels.every((channel) => channel === "linkedin");
 
-  if (looksLikeStory(content)) {
-    return { width: 1080, height: 1920, kind: "story" };
-  }
-
-  if (content.formato === "carrossel" || content.formato === "comparacao" || content.formato === "checklist") {
-    return { width: 1080, height: 1080, kind: "square" };
-  }
-
-  if (onlyLinkedIn) {
-    if (content.formato === "analise" || content.formato === "insight_estrategico") {
-      return { width: 1200, height: 627, kind: "landscape" };
-    }
-
-    return { width: 1200, height: 1500, kind: "portrait" };
-  }
-
-  if (onlyInstagram) {
-    return { width: 1080, height: 1350, kind: "portrait" };
-  }
-
+  if (looksLikeStory(content)) return { width: 1080, height: 1920, kind: "story" };
+  if (content.formato === "carrossel" || content.formato === "comparacao" || content.formato === "checklist") return { width: 1080, height: 1080, kind: "square" };
+  if (onlyLinkedIn && (content.formato === "analise" || content.formato === "insight_estrategico")) return { width: 1200, height: 627, kind: "landscape" };
+  if (onlyLinkedIn) return { width: 1200, height: 1500, kind: "portrait" };
+  if (onlyInstagram) return { width: 1080, height: 1350, kind: "portrait" };
   return { width: 1080, height: 1080, kind: "square" };
 }
 
@@ -493,224 +497,81 @@ function looksLikeStory(content: ErizonContentOutput) {
   return base.includes("story") || base.includes("stories") || base.includes("9:16");
 }
 
-function buildBadge(content: ErizonContentOutput) {
-  if (content.formato === "carrossel") {
-    return "Carousel";
-  }
-
-  if (content.canais_publicacao?.includes("linkedin") && !content.canais_publicacao.includes("instagram")) {
-    return "LinkedIn";
-  }
-
-  return pillarLabel(content.pilar);
+function getPadding(canvas: CanvasSpec) {
+  if (canvas.kind === "story") return 80;
+  if (canvas.kind === "portrait") return 74;
+  if (canvas.kind === "landscape") return 56;
+  return 68;
 }
 
-function buildEyebrow(content: ErizonContentOutput, canvas: CanvasSpec) {
-  const channelLabel = content.canais_publicacao?.includes("instagram")
-    ? content.canais_publicacao.includes("linkedin")
-      ? "Instagram + LinkedIn"
-      : "Instagram"
-    : content.canais_publicacao?.includes("linkedin")
-      ? "LinkedIn"
-      : canvas.kind === "story"
-        ? "Instagram Stories"
-        : "Social Post";
-
-  return `${channelLabel} // ${formatLabel(content.formato)}`;
+function getHookMaxChars(canvas: CanvasSpec, content: ErizonContentOutput) {
+  if (content.formato === "analise" || content.formato === "insight_estrategico") return canvas.kind === "landscape" ? 18 : 22;
+  if (canvas.kind === "story") return 18;
+  if (canvas.kind === "portrait") return 22;
+  if (canvas.kind === "landscape") return 24;
+  return 24;
 }
 
-function getOuterPadding(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 88;
-    case "portrait":
-      return 76;
-    case "landscape":
-      return 58;
-    default:
-      return 68;
-  }
+function getHookMaxLines(canvas: CanvasSpec, content: ErizonContentOutput) {
+  if (content.formato === "analise" || content.formato === "insight_estrategico") return 3;
+  if (canvas.kind === "story") return 5;
+  if (canvas.kind === "landscape") return 3;
+  return 4;
 }
 
-function getInset(canvas: CanvasSpec, delta: number) {
-  const outer = getOuterPadding(canvas);
-  return `${outer - delta}px`;
+function getSubMaxChars(canvas: CanvasSpec) {
+  if (canvas.kind === "story") return 30;
+  if (canvas.kind === "landscape") return 36;
+  return 34;
 }
 
-function getHeadlineWidth(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 840;
-    case "portrait":
-      return 860;
-    case "landscape":
-      return 730;
-    default:
-      return 820;
-  }
+function getTitleSize(canvas: CanvasSpec, lineCount: number, layout: string) {
+  if (layout === "stats" || layout === "checklist") return canvas.kind === "landscape" ? 48 : 60;
+  if (canvas.kind === "story") return lineCount > 3 ? 60 : 74;
+  if (canvas.kind === "portrait") return lineCount > 3 ? 62 : 80;
+  if (canvas.kind === "landscape") return lineCount > 2 ? 48 : 60;
+  return lineCount > 3 ? 60 : 76;
 }
 
-function getSupportWidth(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 760;
-    case "portrait":
-      return 780;
-    case "landscape":
-      return 620;
-    default:
-      return 760;
-  }
-}
-
-function getHeadlineSize(canvas: CanvasSpec, lineCount: number) {
-  if (canvas.kind === "story") {
-    return lineCount > 4 ? 90 : 108;
-  }
-
-  if (canvas.kind === "portrait") {
-    return lineCount > 4 ? 78 : 94;
-  }
-
-  if (canvas.kind === "landscape") {
-    return lineCount > 3 ? 58 : 72;
-  }
-
-  return lineCount > 4 ? 72 : 86;
-}
-
-function getSupportSize(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 28;
-    case "portrait":
-      return 24;
-    case "landscape":
-      return 20;
-    default:
-      return 22;
-  }
-}
-
-function getHookLineLimit(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 14;
-    case "portrait":
-      return 16;
-    case "landscape":
-      return 20;
-    default:
-      return 16;
-  }
-}
-
-function getHookMaxLines(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 5;
-    case "landscape":
-      return 3;
-    default:
-      return 4;
-  }
-}
-
-function getSupportLineLimit(canvas: CanvasSpec) {
-  switch (canvas.kind) {
-    case "story":
-      return 26;
-    case "portrait":
-      return 28;
-    case "landscape":
-      return 34;
-    default:
-      return 28;
-  }
-}
-
-function loadLogoDataUrl() {
-  if (logoCache) {
-    return logoCache;
-  }
-
-  const logoPath = path.resolve(process.cwd(), "public/logo-erizon.png");
-
-  if (!fs.existsSync(logoPath)) {
-    return null;
-  }
-
-  logoCache = `data:image/png;base64,${fs.readFileSync(logoPath).toString("base64")}`;
-  return logoCache;
-}
-
-function wrapText(text: string, maxChars: number, maxLines: number) {
+function wrapWords(text: string, maxChars: number, maxLines: number) {
   const words = text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
   const lines: string[] = [];
   let current = "";
-
   for (const word of words) {
     if (`${current} ${word}`.trim().length > maxChars) {
-      if (current.trim()) {
-        lines.push(current.trim());
-      }
+      if (current.trim()) lines.push(current.trim());
       current = word;
-    } else {
-      current = `${current} ${word}`.trim();
-    }
+    } else current = `${current} ${word}`.trim();
   }
-
-  if (current.trim()) {
-    lines.push(current.trim());
-  }
-
-  if (!lines.length) {
-    return [text];
-  }
-
+  if (current.trim()) lines.push(current.trim());
   return lines.slice(0, maxLines);
+}
+
+function extractSubLines(text: string, maxChars: number, maxLines: number) {
+  const clean = stripHtml(text);
+  const firstSentence = clean.match(/^[^.!?]+[.!?]/)?.[0] || clean.slice(0, maxChars * maxLines);
+  return wrapWords(firstSentence.trim(), maxChars, maxLines);
+}
+
+function extractChecklistItems(text: string) {
+  const clean = stripHtml(text);
+  const sentencePieces = clean.split(/[.!?]\s+/).map((piece) => piece.trim()).filter(Boolean);
+  const items = sentencePieces.slice(0, 3).map((item) => truncate(item, 72));
+  if (items.length >= 2) return items;
+  const words = clean.split(/\s+/).filter(Boolean);
+  return [truncate(words.slice(0, 8).join(" "), 72), truncate(words.slice(8, 18).join(" "), 72), truncate(words.slice(18, 30).join(" "), 72)].filter((item) => item.length > 6);
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 }
 
 function formatLabel(format: ErizonContentOutput["formato"]) {
   return format.replaceAll("_", " ");
 }
 
-function pillarLabel(pillar: ErizonContentOutput["pilar"]) {
-  return pillar.replaceAll("_", " ").toUpperCase();
-}
-
 function truncate(value: string, maxLength: number) {
   return value.length <= maxLength ? value : `${value.slice(0, maxLength - 3)}...`;
-}
-
-function pickAccent(pillar: ErizonContentOutput["pilar"]) {
-  switch (pillar) {
-    case "educacao":
-      return "#00E7FF";
-    case "desejo":
-      return "#FF2BD6";
-    case "conexao":
-      return "#39C6FF";
-    case "prova":
-      return "#7C5CFF";
-    default:
-      return "#B517FF";
-  }
-}
-
-function pickAccentAlt(pillar: ErizonContentOutput["pilar"]) {
-  switch (pillar) {
-    case "educacao":
-      return "#B517FF";
-    case "desejo":
-      return "#FF7A00";
-    case "conexao":
-      return "#B517FF";
-    case "prova":
-      return "#00E7FF";
-    default:
-      return "#00E7FF";
-  }
 }
 
 function withAlpha(hex: string, alpha: number) {
@@ -723,10 +584,5 @@ function withAlpha(hex: string, alpha: number) {
 }
 
 function escapeXml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 }
