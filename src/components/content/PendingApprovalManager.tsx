@@ -43,6 +43,15 @@ export function PendingApprovalManager({
         <div className="approval-list">
           {items.map((item) => (
             <label key={item.id} className="approval-card approval-card--selectable">
+              {item.content?.asset_url_publicacao && (
+                <div className="approval-card__image">
+                  <img
+                    src={item.content.asset_url_publicacao}
+                    alt={item.title}
+                    style={{ width: "100%", borderRadius: "8px", display: "block", marginBottom: "12px" }}
+                  />
+                </div>
+              )}
               <div className="approval-card__select">
                 <input type="checkbox" name="postIds" value={item.id} />
                 <span className="status-pill status-pill--pending">

@@ -20,6 +20,15 @@ export function ApprovalQueuePanel({ items }: ApprovalQueuePanelProps) {
       <div className="approval-list">
         {items.map((item) => (
           <article key={item.id} className="approval-card">
+            {item.content?.asset_url_publicacao && (
+              <div className="approval-card__image">
+                <img
+                  src={item.content.asset_url_publicacao}
+                  alt={item.title}
+                  style={{ width: "100%", borderRadius: "8px", display: "block", marginBottom: "12px" }}
+                />
+              </div>
+            )}
             <div className="approval-card__top">
               <span className="status-pill status-pill--pending">Pendente</span>
               <span className="format-pill">{item.format}</span>

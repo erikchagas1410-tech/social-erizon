@@ -204,6 +204,7 @@ function buildCardTree(
         overflow: "hidden"
       },
       children: [
+        // Grid futurista
         {
           type: "div",
           props: {
@@ -212,38 +213,119 @@ function buildCardTree(
               inset: "0",
               display: "flex",
               backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
-              backgroundSize: `${canvas.kind === "story" ? 68 : 54}px ${canvas.kind === "story" ? 68 : 54}px`,
-              opacity: 0.5
+                "linear-gradient(rgba(255,255,255,0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px)",
+              backgroundSize: `${canvas.kind === "story" ? 72 : 56}px ${canvas.kind === "story" ? 72 : 56}px`,
+              opacity: 0.85
             }
           }
         },
+        // Glow externo superior direito
         {
           type: "div",
           props: {
             style: {
               position: "absolute",
-              top: canvas.kind === "story" ? "-120px" : "-70px",
-              right: canvas.kind === "landscape" ? "-80px" : "-40px",
-              width: canvas.kind === "story" ? "340px" : "220px",
-              height: canvas.kind === "story" ? "340px" : "220px",
+              top: canvas.kind === "story" ? "-180px" : "-120px",
+              right: canvas.kind === "landscape" ? "-130px" : "-90px",
+              width: canvas.kind === "story" ? "520px" : "380px",
+              height: canvas.kind === "story" ? "520px" : "380px",
               borderRadius: "999px",
-              background: withAlpha(template.accent, 0.32),
+              background: withAlpha(template.accent, 0.10),
               display: "flex"
             }
           }
         },
+        // Circulo neon principal superior direito
         {
           type: "div",
           props: {
             style: {
               position: "absolute",
-              left: canvas.kind === "landscape" ? "64%" : "-70px",
-              bottom: canvas.kind === "story" ? "-120px" : "-90px",
-              width: canvas.kind === "story" ? "360px" : "240px",
-              height: canvas.kind === "story" ? "360px" : "240px",
+              top: canvas.kind === "story" ? "-110px" : "-65px",
+              right: canvas.kind === "landscape" ? "-70px" : "-35px",
+              width: canvas.kind === "story" ? "320px" : "260px",
+              height: canvas.kind === "story" ? "320px" : "260px",
               borderRadius: "999px",
-              background: withAlpha(template.accent, 0.14),
+              background: withAlpha(template.accent, 0.40),
+              display: "flex"
+            }
+          }
+        },
+        // Anel externo (borda neon)
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              top: canvas.kind === "story" ? "-130px" : "-80px",
+              right: canvas.kind === "landscape" ? "-85px" : "-50px",
+              width: canvas.kind === "story" ? "360px" : "300px",
+              height: canvas.kind === "story" ? "360px" : "300px",
+              borderRadius: "999px",
+              border: `2px solid ${withAlpha(template.accent, 0.30)}`,
+              display: "flex"
+            }
+          }
+        },
+        // Circulo inferior esquerdo
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              left: canvas.kind === "landscape" ? "60%" : "-80px",
+              bottom: canvas.kind === "story" ? "-130px" : "-100px",
+              width: canvas.kind === "story" ? "380px" : "290px",
+              height: canvas.kind === "story" ? "380px" : "290px",
+              borderRadius: "999px",
+              background: withAlpha(template.accent, 0.16),
+              display: "flex"
+            }
+          }
+        },
+        // Linha horizontal scan-line futurista
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              top: canvas.kind === "story" ? "38%" : "36%",
+              left: "0",
+              right: "0",
+              height: "1px",
+              background: `linear-gradient(90deg, transparent, ${withAlpha(template.accent, 0.25)}, transparent)`,
+              display: "flex"
+            }
+          }
+        },
+        // Bracket canto superior esquerdo
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              top: `${padding - 10}px`,
+              left: `${padding - 10}px`,
+              width: "32px",
+              height: "32px",
+              borderTop: `2px solid ${withAlpha(template.accent, 0.55)}`,
+              borderLeft: `2px solid ${withAlpha(template.accent, 0.55)}`,
+              display: "flex"
+            }
+          }
+        },
+        // Bracket canto inferior direito
+        {
+          type: "div",
+          props: {
+            style: {
+              position: "absolute",
+              bottom: `${padding - 10}px`,
+              right: `${padding - 10}px`,
+              width: "32px",
+              height: "32px",
+              borderBottom: `2px solid ${withAlpha(template.accent, 0.55)}`,
+              borderRight: `2px solid ${withAlpha(template.accent, 0.55)}`,
               display: "flex"
             }
           }
@@ -402,35 +484,72 @@ function buildChecklistLayout(content: ErizonContentOutput, title: string[], pil
 }
 
 function edgeBars(template: CardTemplate, canvas: CanvasSpec) {
+  const h = canvas.kind === "story" ? "14px" : "10px";
   return {
     type: "div",
     props: {
       children: [
-        { type: "div", props: { style: { position: "absolute", top: "0", left: "0", right: "0", height: canvas.kind === "story" ? "10px" : "8px", background: `linear-gradient(90deg,transparent,${template.accent},transparent)`, display: "flex" } } },
-        { type: "div", props: { style: { position: "absolute", bottom: "0", left: "0", right: "0", height: canvas.kind === "story" ? "10px" : "8px", background: `linear-gradient(90deg,${template.accent},transparent,${template.accent})`, display: "flex" } } }
+        { type: "div", props: { style: { position: "absolute", top: "0", left: "0", right: "0", height: h, background: `linear-gradient(90deg,transparent 0%,${template.accent} 40%,${template.accent} 60%,transparent 100%)`, display: "flex" } } },
+        { type: "div", props: { style: { position: "absolute", top: "0", left: "0", right: "0", height: "2px", background: `linear-gradient(90deg,transparent,${withAlpha(template.accent, 0.5)},transparent)`, display: "flex" } } },
+        { type: "div", props: { style: { position: "absolute", bottom: "0", left: "0", right: "0", height: h, background: `linear-gradient(90deg,${template.accent} 0%,transparent 40%,transparent 60%,${template.accent} 100%)`, display: "flex" } } },
+        { type: "div", props: { style: { position: "absolute", bottom: "0", left: "0", right: "0", height: "2px", background: `linear-gradient(90deg,${withAlpha(template.accent, 0.5)},transparent,${withAlpha(template.accent, 0.5)})`, display: "flex" } } }
       ]
     }
   };
 }
 
 function badge(label: string, template: CardTemplate, canvas: CanvasSpec) {
-  return { type: "div", props: { style: { background: template.tagBg, border: template.tagBorder, borderRadius: "6px", padding: canvas.kind === "story" ? "8px 22px" : "6px 18px", color: template.tagColor, fontSize: `${canvas.kind === "story" ? 22 : 18}px`, fontWeight: "700", letterSpacing: "3px" }, children: label } };
+  const fs = canvas.kind === "story" ? 22 : 18;
+  const pad = canvas.kind === "story" ? "9px 24px" : "7px 20px";
+  return {
+    type: "div",
+    props: {
+      style: { display: "flex", flexDirection: "column" },
+      children: [
+        {
+          type: "div",
+          props: {
+            style: { background: template.tagBg, border: `1px solid ${withAlpha(template.accent, 0.65)}`, borderRadius: "6px", padding: pad, color: template.tagColor, fontSize: `${fs}px`, fontWeight: "700", letterSpacing: "3.5px", display: "flex" },
+            children: label
+          }
+        }
+      ]
+    }
+  };
 }
 
 function pillBadge(label: string, template: CardTemplate, canvas: CanvasSpec) {
-  return { type: "div", props: { style: { background: template.tagBg, border: template.tagBorder, borderRadius: "999px", padding: canvas.kind === "story" ? "10px 26px" : "8px 24px", color: template.tagColor, fontSize: `${canvas.kind === "story" ? 20 : 18}px`, fontWeight: "700", letterSpacing: "4px" }, children: label } };
+  const fs = canvas.kind === "story" ? 20 : 18;
+  const pad = canvas.kind === "story" ? "11px 28px" : "9px 26px";
+  return {
+    type: "div",
+    props: {
+      style: { background: template.tagBg, border: `1px solid ${withAlpha(template.accent, 0.65)}`, borderRadius: "999px", padding: pad, color: template.tagColor, fontSize: `${fs}px`, fontWeight: "700", letterSpacing: "4px", display: "flex" },
+      children: label
+    }
+  };
 }
 
 function accentRule(accent: string, canvas: CanvasSpec) {
-  return { type: "div", props: { style: { height: "2px", width: `${canvas.kind === "story" ? 84 : 60}px`, background: accent, marginTop: "18px", marginBottom: "16px", display: "flex" } } };
+  const w = canvas.kind === "story" ? 100 : 72;
+  return {
+    type: "div",
+    props: {
+      style: { display: "flex", flexDirection: "column", gap: "4px", marginTop: "20px", marginBottom: "18px" },
+      children: [
+        { type: "div", props: { style: { height: "3px", width: `${w}px`, background: accent, display: "flex" } } },
+        { type: "div", props: { style: { height: "1px", width: `${Math.round(w * 0.55)}px`, background: withAlpha(accent, 0.45), display: "flex" } } }
+      ]
+    }
+  };
 }
 
 function textLine(line: string, color: string, fontSize: number) {
-  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.04", letterSpacing: "-1px" }, children: line } };
+  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.22", letterSpacing: "-0.5px" }, children: line } };
 }
 
 function centeredTextLine(line: string, color: string, fontSize: number) {
-  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.04", letterSpacing: "-1px", textAlign: "center", justifyContent: "center", display: "flex" }, children: line } };
+  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.22", letterSpacing: "-0.5px", textAlign: "center", justifyContent: "center", display: "flex" }, children: line } };
 }
 
 function footerRow(template: CardTemplate, footer: string, canvas: CanvasSpec) {
@@ -506,11 +625,11 @@ function getPadding(canvas: CanvasSpec) {
 }
 
 function getHookMaxChars(canvas: CanvasSpec, content: ErizonContentOutput) {
-  if (content.formato === "analise" || content.formato === "insight_estrategico") return canvas.kind === "landscape" ? 18 : 22;
-  if (canvas.kind === "story") return 18;
-  if (canvas.kind === "portrait") return 22;
-  if (canvas.kind === "landscape") return 24;
-  return 24;
+  if (content.formato === "analise" || content.formato === "insight_estrategico") return canvas.kind === "landscape" ? 22 : 26;
+  if (canvas.kind === "story") return 22;
+  if (canvas.kind === "portrait") return 26;
+  if (canvas.kind === "landscape") return 28;
+  return 28;
 }
 
 function getHookMaxLines(canvas: CanvasSpec, content: ErizonContentOutput) {
