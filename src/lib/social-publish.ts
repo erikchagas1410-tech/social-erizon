@@ -93,6 +93,46 @@ async function publishToLinkedIn(content: ErizonContentOutput) {
     ? personUrnInput
     : `urn:li:person:${personUrnInput}`;
 
+  const caption = truncate(buildPublishCaption(content, "linkedin"), 3000);
+
+  // Se tem imagem, faz upload e posta com ela
+  if (content.asset_url_publicacao) {
+    const assetUrn = await uploadImageToLinkedIn(accessToken, author, content.asset_url_publicacao);
+
+    const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Restli-Protocol-Version": "2.0.0"
+      },
+      body: JSON.stringify({
+        author,
+        lifecycleState: "PUBLISHED",
+        specificContent: {
+          "com.linkedin.ugc.ShareContent": {
+            shareCommentary: { text: caption },
+            shareMediaCategory: "IMAGE",
+            media: [
+              {
+                status: "READY",
+                media: assetUrn,
+                title: { text: truncate(content.gancho, 200) }
+              }
+            ]
+          }
+        },
+        visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" }
+      }),
+      cache: "no-store"
+    });
+
+    const responseText = await response.text();
+    if (!response.ok) throw new Error(`Falha ao publicar no LinkedIn: ${responseText}`);
+    return response.headers.get("x-restli-id") ?? "linkedin-post-created";
+  }
+
+  // Fallback: post só texto
   const response = await fetch("https://api.linkedin.com/v2/ugcPosts", {
     method: "POST",
     headers: {
@@ -105,27 +145,87 @@ async function publishToLinkedIn(content: ErizonContentOutput) {
       lifecycleState: "PUBLISHED",
       specificContent: {
         "com.linkedin.ugc.ShareContent": {
-          shareCommentary: {
-            text: truncate(buildPublishCaption(content, "linkedin"), 3000)
-          },
+          shareCommentary: { text: caption },
           shareMediaCategory: "NONE",
           media: []
         }
       },
-      visibility: {
-        "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-      }
+      visibility: { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" }
     }),
     cache: "no-store"
   });
 
   const responseText = await response.text();
+  if (!response.ok) throw new Error(`Falha ao publicar no LinkedIn: ${responseText}`);
+  return response.headers.get("x-restli-id") ?? "linkedin-post-created";
+}
 
-  if (!response.ok) {
-    throw new Error(`Falha ao publicar no LinkedIn: ${responseText}`);
+async function uploadImageToLinkedIn(accessToken: string, owner: string, imageUrl: string): Promise<string> {
+  // Passo 1: registrar o upload e obter URL temporária + URN do asset
+  const registerResponse = await fetch("https://api.linkedin.com/v2/assets?action=registerUpload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "X-Restli-Protocol-Version": "2.0.0"
+    },
+    body: JSON.stringify({
+      registerUploadRequest: {
+        recipes: ["urn:li:digitalmediaRecipe:feedshare-image"],
+        owner,
+        serviceRelationships: [
+          { relationshipType: "OWNER", identifier: "urn:li:userGeneratedContent" }
+        ]
+      }
+    }),
+    cache: "no-store"
+  });
+
+  if (!registerResponse.ok) {
+    const text = await registerResponse.text();
+    throw new Error(`Falha ao registrar upload no LinkedIn: ${text}`);
   }
 
-  return response.headers.get("x-restli-id") ?? "linkedin-post-created";
+  const registerData = await registerResponse.json() as {
+    value: {
+      asset: string;
+      uploadMechanism: {
+        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+          uploadUrl: string;
+        };
+      };
+    };
+  };
+
+  const assetUrn = registerData.value.asset;
+  const uploadUrl =
+    registerData.value.uploadMechanism[
+      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+    ].uploadUrl;
+
+  // Passo 2: buscar a imagem e fazer upload para o LinkedIn
+  const imageResponse = await fetch(imageUrl, { cache: "no-store" });
+  if (!imageResponse.ok) {
+    throw new Error(`Falha ao buscar imagem para LinkedIn: HTTP ${imageResponse.status}`);
+  }
+  const imageBuffer = await imageResponse.arrayBuffer();
+
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "image/png"
+    },
+    body: imageBuffer,
+    cache: "no-store"
+  });
+
+  if (!uploadResponse.ok) {
+    const text = await uploadResponse.text();
+    throw new Error(`Falha ao fazer upload da imagem no LinkedIn: ${text}`);
+  }
+
+  return assetUrn;
 }
 
 async function publishToInstagram(content: ErizonContentOutput) {
