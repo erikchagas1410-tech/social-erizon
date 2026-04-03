@@ -61,7 +61,8 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
     });
 
     return sharp(Buffer.from(svg)).png().toBuffer();
-  } catch {
+  } catch (err) {
+    console.error("[branded-image] Falha no Satori, usando fallback SVG:", err);
     const svg = buildFallbackSvg(content, canvas, template);
     return sharp(Buffer.from(svg)).png().toBuffer();
   }
