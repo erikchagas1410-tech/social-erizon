@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { GrowthOnboarding, GrowthReport } from "@/app/api/growth-analyst/route";
+import type { GrowthOnboarding, GrowthReport } from "@/types/growth-analyst";
 
 const stages = [
   { value: "pre_revenue", label: "Pre-revenue (validando)" },

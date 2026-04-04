@@ -24,6 +24,10 @@ export function CommandCenterActions() {
         Atualizar
       </button>
 
+      <Link href="/growth-analyst" className="ghost-button">
+        Analista de Growth
+      </Link>
+
       <Link href="/generate-content" className="primary-button secondary">
         Gerar Post
       </Link>
