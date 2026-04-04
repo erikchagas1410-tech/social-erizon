@@ -7,12 +7,17 @@ export default function HomePage() {
         <p className="section-kicker">ERIZON SOCIAL AI</p>
         <h1>Command Center pronto para operar.</h1>
         <p>
-          A base da central foi estruturada para aprovacao, agendamento,
-          monitoramento e atividade em tempo real.
+          Central de operacao de conteudo com IA — aprovacao, agendamento,
+          monitoramento e publicacao em tempo real.
         </p>
-        <Link href="/command-center" className="primary-button">
-          Abrir Command Center
-        </Link>
+        <div className="landing-actions">
+          <Link href="/command-center" className="primary-button">
+            Abrir Command Center
+          </Link>
+          <Link href="/growth-analyst" className="ghost-button">
+            Analista de Growth
+          </Link>
+        </div>
       </div>
     </main>
   );

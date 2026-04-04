@@ -113,6 +113,13 @@ button {
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
 }
 
+.landing-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
 .landing-card h1,
 .top-header h2,
 .brand-lockup__title {
@@ -1212,11 +1219,142 @@ button {
 
 /* ─── Growth Analyst — Onboarding ──────────────────────────────── */
 
-.onboarding-setup-grid {
+.ob-block {
+  margin-bottom: 0;
+}
+
+.ob-block__head {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.ob-block__num {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(var(--glow-violet), 0.16);
+  color: var(--violet);
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: var(--title-font);
+  letter-spacing: 0.04em;
+}
+
+.ob-block__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.ob-block__hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.ob-block__body {
+  display: grid;
+  gap: 20px;
+}
+
+.ob-question {
+  display: grid;
+  gap: 10px;
+}
+
+.ob-question__label {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.ob-two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-top: 20px;
+}
+
+.ob-three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.ob-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.ob-input:focus {
+  border-color: rgba(var(--glow-violet), 0.5);
+}
+
+.ob-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.ob-textarea:focus {
+  border-color: rgba(var(--glow-violet), 0.5);
+}
+
+.ob-infra-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.ob-infra-item {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ob-infra-label {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.ob-roi-preview {
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--glow-cyan), 0.22);
+  background: rgba(var(--glow-cyan), 0.06);
+}
+
+.ob-roi-preview p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.ob-roi-preview strong {
+  color: var(--cyan);
 }
 
 .onboarding-field {
@@ -1780,7 +1918,10 @@ button {
   .growth-form-grid,
   .growth-hero-row,
   .growth-opportunities-grid,
-  .growth-bottom-grid {
+  .growth-bottom-grid,
+  .ob-two-col,
+  .ob-three-col,
+  .ob-infra-grid {
     grid-template-columns: 1fr;
   }
 }

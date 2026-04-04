@@ -8,20 +8,12 @@ import type { GrowthReport } from "@/types/growth-analyst";
 interface OnboardingData {
   companyName: string;
   niche: string;
-  segA: string;
-  segB: string;
-  mainFocus: string;
-  prioritySegment: string;
+  stage: string;
   revenueChannels: string[];
-  aTicket: string;
-  aIdealClient: string;
-  aBestProject: string;
-  aClosingTime: string;
-  bTicket: string;
-  bIdealClient: string;
-  bUnwantedClient: string;
-  bClosingTime: string;
-  positioning: string;
+  avgTicket: string;
+  idealClient: string;
+  closingTime: string;
+  positioning: string[];
   differentiator: string;
   mainProblem: string;
   trafficGoal: string[];
@@ -35,33 +27,26 @@ interface OnboardingData {
   investmentRange: string;
   clientsPerMonth: string;
   clientValue: string;
-  alignmentNote: string;
+  notes: string;
 }
 
 const EMPTY: OnboardingData = {
-  companyName: "", niche: "", segA: "Segmento A", segB: "Segmento B",
-  mainFocus: "", prioritySegment: "", revenueChannels: [],
-  aTicket: "", aIdealClient: "", aBestProject: "", aClosingTime: "",
-  bTicket: "", bIdealClient: "", bUnwantedClient: "", bClosingTime: "",
-  positioning: "", differentiator: "",
-  mainProblem: "", trafficGoal: [],
+  companyName: "", niche: "", stage: "",
+  revenueChannels: [], avgTicket: "", idealClient: "", closingTime: "",
+  positioning: [], differentiator: "", mainProblem: "", trafficGoal: [],
   hasInstagram: "", hasGoogle: "", hasSite: "", hasCrm: "",
   leadResponder: "", responseTime: "", hasQualification: "",
-  investmentRange: "", clientsPerMonth: "", clientValue: "", alignmentNote: ""
+  investmentRange: "", clientsPerMonth: "", clientValue: "", notes: ""
 };
 
-/* ─── Sub-components ─────────────────────────────────────────────── */
+/* ─── Pill components ────────────────────────────────────────────── */
 
 function Radio({ value, current, onChange, children }: {
   value: string; current: string; onChange: (v: string) => void; children: React.ReactNode;
 }) {
   const active = current === value;
   return (
-    <button
-      type="button"
-      className={`option-pill${active ? " is-active" : ""}`}
-      onClick={() => onChange(active ? "" : value)}
-    >
+    <button type="button" className={`option-pill${active ? " is-active" : ""}`} onClick={() => onChange(active ? "" : value)}>
       <span className="option-pill__dot" />
       {children}
     </button>
@@ -73,11 +58,7 @@ function Check({ value, current, onChange, children }: {
 }) {
   const active = current.includes(value);
   return (
-    <button
-      type="button"
-      className={`option-pill${active ? " is-active is-active--check" : ""}`}
-      onClick={() => onChange(active ? current.filter(x => x !== value) : [...current, value])}
-    >
+    <button type="button" className={`option-pill${active ? " is-active is-active--check" : ""}`} onClick={() => onChange(active ? current.filter(x => x !== value) : [...current, value])}>
       <span className="option-pill__dot" />
       {children}
     </button>
@@ -93,17 +74,33 @@ function YesNo({ value, onChange }: { value: string; onChange: (v: string) => vo
   );
 }
 
-function SectionHeader({ num, title, subtitle }: { num: string; title: string; subtitle?: string }) {
+/* ─── Section header ─────────────────────────────────────────────── */
+
+function Block({ num, title, hint, children }: { num: string; title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="panel-header" style={{ marginBottom: 20 }}>
-      <div>
-        <p className="section-kicker">Seção {num}</p>
-        <h3 style={{ margin: "8px 0 0" }}>{title}</h3>
-        {subtitle ? <p className="panel-header__copy">{subtitle}</p> : null}
+    <section className="panel-shell ob-block">
+      <div className="ob-block__head">
+        <span className="ob-block__num">{num}</span>
+        <div>
+          <h3 className="ob-block__title">{title}</h3>
+          {hint ? <p className="ob-block__hint">{hint}</p> : null}
+        </div>
       </div>
+      <div className="ob-block__body">{children}</div>
+    </section>
+  );
+}
+
+function Q({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="ob-question">
+      <p className="ob-question__label">{label}</p>
+      {children}
     </div>
   );
 }
+
+/* ─── Report sub-components ─────────────────────────────────────── */
 
 function ScoreCard({ label, value, tone, hint }: { label: string; value: string; tone: "violet" | "blue" | "cyan" | "green"; hint: string }) {
   return (
@@ -115,63 +112,47 @@ function ScoreCard({ label, value, tone, hint }: { label: string; value: string;
   );
 }
 
-/* ─── Main Workspace ─────────────────────────────────────────────── */
+/* ─── Main ───────────────────────────────────────────────────────── */
 
 export function GrowthAnalystWorkspace() {
-  const [data, setData] = useState<OnboardingData>(EMPTY);
+  const [d, setD] = useState<OnboardingData>(EMPTY);
   const [report, setReport] = useState<GrowthReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activePhase, setActivePhase] = useState<"days30" | "days60" | "days90">("days30");
+  const [phase, setPhase] = useState<"days30" | "days60" | "days90">("days30");
 
-  const set = (field: keyof OnboardingData) => (value: string) =>
-    setData(prev => ({ ...prev, [field]: value }));
+  const set = (f: keyof OnboardingData) => (v: string) => setD(p => ({ ...p, [f]: v }));
+  const setArr = (f: keyof OnboardingData) => (v: string[]) => setD(p => ({ ...p, [f]: v }));
 
-  const setArr = (field: keyof OnboardingData) => (value: string[]) =>
-    setData(prev => ({ ...prev, [field]: value }));
-
-  const A = data.segA || "Segmento A";
-  const B = data.segB || "Segmento B";
-
-  async function runAnalysis() {
-    if (!data.companyName || !data.niche) {
-      setError("Preencha o nome da empresa e o nicho para continuar.");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    setReport(null);
-
-    const payload = {
-      niche: `${data.niche} — empresa: ${data.companyName}`,
-      stage: data.investmentRange || "early",
-      monthlyRevenue: `${A}: ticket ${data.aTicket || "n/d"} | ${B}: ticket ${data.bTicket || "n/d"}`,
-      mainChannel: data.revenueChannels.join(", ") || data.hasInstagram === "sim" ? "Instagram" : "Indicação",
-      teamSize: `Leads respondidos por: ${data.leadResponder || "n/d"}, tempo de resposta: ${data.responseTime || "n/d"}`,
-      biggestChallenge: data.mainProblem || "Não informado",
-      mainGoal: [data.trafficGoal.join(", "), `Meta: ${data.clientsPerMonth} clientes/mês`].filter(Boolean).join(" | "),
-      leadSource: data.revenueChannels.join(", ") || "Indicação",
-      uniqueValue: `Posicionamento: ${data.positioning || "n/d"}. Diferencial: ${data.differentiator || "n/d"}`,
-      whatFailed: data.alignmentNote || "Não informado",
-      extra: JSON.stringify({
-        foco: data.mainFocus, prioridade: data.prioritySegment,
-        [A]: { ticket: data.aTicket, clienteIdeal: data.aIdealClient, melhorProjeto: data.aBestProject, fechamento: data.aClosingTime },
-        [B]: { ticket: data.bTicket, clienteIdeal: data.bIdealClient, clienteIndesejado: data.bUnwantedClient, fechamento: data.bClosingTime },
-        estrutura: { instagram: data.hasInstagram, google: data.hasGoogle, site: data.hasSite, crm: data.hasCrm },
-        comercial: { qualificacao: data.hasQualification, resposta: data.responseTime },
-        investimento: data.investmentRange,
-        valorCliente: data.clientValue
-      })
-    };
-
+  async function run() {
+    if (!d.companyName || !d.niche) { setError("Preencha nome e nicho da empresa."); return; }
+    setLoading(true); setError(null); setReport(null);
     try {
       const res = await fetch("/api/growth-analyst", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          niche: `${d.niche} — ${d.companyName}`,
+          stage: d.stage,
+          monthlyRevenue: `Ticket médio: ${d.avgTicket || "n/d"} | Ciclo: ${d.closingTime || "n/d"}`,
+          mainChannel: d.revenueChannels.join(", ") || "Indicação",
+          teamSize: `Leads: ${d.leadResponder || "n/d"} | Resposta: ${d.responseTime || "n/d"} | Qualificação: ${d.hasQualification || "n/d"}`,
+          biggestChallenge: d.mainProblem || "Não informado",
+          mainGoal: d.trafficGoal.join(", ") || "Crescimento geral",
+          leadSource: d.revenueChannels.join(", "),
+          uniqueValue: `Posicionamento: ${d.positioning.join(", ") || "n/d"}. Diferencial: ${d.differentiator || "n/d"}`,
+          whatFailed: d.notes || "Não informado",
+          context: JSON.stringify({
+            clienteIdeal: d.idealClient,
+            estrutura: { instagram: d.hasInstagram, google: d.hasGoogle, site: d.hasSite, crm: d.hasCrm },
+            investimento: d.investmentRange,
+            metaMensal: d.clientsPerMonth,
+            valorCliente: d.clientValue
+          })
+        })
       });
       const json = (await res.json()) as GrowthReport & { error?: string };
-      if (!res.ok) throw new Error(json.error ?? "Erro na analise");
+      if (!res.ok) throw new Error(json.error ?? "Erro");
       setReport(json);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha desconhecida.");
@@ -182,292 +163,170 @@ export function GrowthAnalystWorkspace() {
 
   const phaseLabel = { days30: "30 dias", days60: "60 dias", days90: "90 dias" };
 
-  /* ── Render ───────────────────────────────────────────────────── */
   return (
     <>
-      {/* ── Setup ── */}
-      <section className="panel-shell">
-        <SectionHeader num="0" title="Identificação" subtitle="Nome da empresa e nicho — isso personaliza toda a análise." />
-        <div className="onboarding-setup-grid">
-          <label className="field-shell">
-            <span>Nome da empresa</span>
-            <input type="text" placeholder="Ex: Iconico Arquitetura" value={data.companyName} onChange={e => set("companyName")(e.target.value)} />
-          </label>
-          <label className="field-shell">
-            <span>Nicho / setor</span>
-            <input type="text" placeholder="Ex: Escritório de arquitetura alto padrão" value={data.niche} onChange={e => set("niche")(e.target.value)} />
-          </label>
-          <label className="field-shell">
-            <span>Label do Segmento A</span>
-            <input type="text" placeholder="Ex: Comercial" value={data.segA} onChange={e => set("segA")(e.target.value)} />
-          </label>
-          <label className="field-shell">
-            <span>Label do Segmento B</span>
-            <input type="text" placeholder="Ex: Residencial" value={data.segB} onChange={e => set("segB")(e.target.value)} />
-          </label>
+      {/* 1 — Identificação */}
+      <Block num="01" title="Identificação da empresa" hint="Nome e nicho — personaliza toda a análise.">
+        <div className="ob-two-col">
+          <Q label="Nome da empresa">
+            <input className="ob-input" type="text" placeholder="Ex: Iconico, NovaMente, FluxoAds..." value={d.companyName} onChange={e => set("companyName")(e.target.value)} />
+          </Q>
+          <Q label="Nicho / setor">
+            <input className="ob-input" type="text" placeholder="Ex: Arquitetura, Agência de tráfego, SaaS B2B..." value={d.niche} onChange={e => set("niche")(e.target.value)} />
+          </Q>
         </div>
-      </section>
-
-      {/* ── Seção 1: Visão do negócio ── */}
-      <section className="panel-shell">
-        <SectionHeader num="1" title="Visão do negócio" subtitle="Onde o negócio está focado e de onde vem o dinheiro hoje." />
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Qual o foco principal hoje?</p>
+        <Q label="Estágio atual do negócio">
           <div className="option-row">
-            <Radio value="a" current={data.mainFocus} onChange={set("mainFocus")}>{A}</Radio>
-            <Radio value="b" current={data.mainFocus} onChange={set("mainFocus")}>{B}</Radio>
-            <Radio value="ambos" current={data.mainFocus} onChange={set("mainFocus")}>Ambos</Radio>
-          </div>
-        </div>
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Qual braço é prioridade hoje?</p>
-          <div className="option-row">
-            <Radio value="a" current={data.prioritySegment} onChange={set("prioritySegment")}>{A}</Radio>
-            <Radio value="b" current={data.prioritySegment} onChange={set("prioritySegment")}>{B}</Radio>
-          </div>
-        </div>
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Como faturam hoje? <em>(pode marcar mais de um)</em></p>
-          <div className="option-row">
-            {["Indicação", "Instagram", "Google", "LinkedIn", "Outbound", "Eventos", "Outros"].map(v => (
-              <Check key={v} value={v} current={data.revenueChannels} onChange={setArr("revenueChannels")}>{v}</Check>
+            {["Validando", "0 – 10k/mês", "10k – 50k/mês", "50k – 200k/mês", "+ 200k/mês"].map(v => (
+              <Radio key={v} value={v} current={d.stage} onChange={set("stage")}>{v}</Radio>
             ))}
           </div>
-        </div>
-      </section>
+        </Q>
+      </Block>
 
-      {/* ── Seção 2: Produto / Serviço ── */}
-      <section className="panel-shell">
-        <SectionHeader num="2" title="Produto / Serviço" subtitle="Números e perfil de cliente por segmento." />
-        <div className="segment-grid">
-          <div className="segment-block segment-block--a">
-            <p className="segment-block__label">{A}</p>
-            <div className="field-stack">
-              <label className="field-shell">
-                <span>Ticket médio</span>
-                <input type="text" placeholder="Ex: R$ 180.000" value={data.aTicket} onChange={e => set("aTicket")(e.target.value)} />
-              </label>
-              <label className="field-shell">
-                <span>Tipo de cliente ideal</span>
-                <input type="text" placeholder="Ex: Empresas médias em expansão" value={data.aIdealClient} onChange={e => set("aIdealClient")(e.target.value)} />
-              </label>
-              <label className="field-shell">
-                <span>Tipo de projeto mais lucrativo</span>
-                <input type="text" placeholder="Ex: Retrofit de escritórios" value={data.aBestProject} onChange={e => set("aBestProject")(e.target.value)} />
-              </label>
-              <label className="field-shell">
-                <span>Tempo médio de fechamento</span>
-                <input type="text" placeholder="Ex: 3 semanas" value={data.aClosingTime} onChange={e => set("aClosingTime")(e.target.value)} />
-              </label>
-            </div>
-          </div>
-
-          <div className="segment-block segment-block--b">
-            <p className="segment-block__label">{B}</p>
-            <div className="field-stack">
-              <label className="field-shell">
-                <span>Ticket médio</span>
-                <input type="text" placeholder="Ex: R$ 320.000" value={data.bTicket} onChange={e => set("bTicket")(e.target.value)} />
-              </label>
-              <label className="field-shell">
-                <span>Tipo de cliente ideal</span>
-                <input type="text" placeholder="Ex: Família alto padrão, 1ª construção" value={data.bIdealClient} onChange={e => set("bIdealClient")(e.target.value)} />
-              </label>
-              <label className="field-shell">
-                <span>Tipo de cliente que NÃO querem</span>
-                <input type="text" placeholder="Ex: Projetos abaixo de R$ 200k" value={data.bUnwantedClient} onChange={e => set("bUnwantedClient")(e.target.value)} />
-              </label>
-              <label className="field-shell">
-                <span>Tempo médio de fechamento</span>
-                <input type="text" placeholder="Ex: 45 dias" value={data.bClosingTime} onChange={e => set("bClosingTime")(e.target.value)} />
-              </label>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Seção 3: Posicionamento ── */}
-      <section className="panel-shell">
-        <SectionHeader num="3" title="Posicionamento" subtitle="Como querem ser percebidos e o que os diferencia no mercado." />
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Como querem ser percebidos?</p>
+      {/* 2 — Como faturam */}
+      <Block num="02" title="Como faturam hoje" hint="De onde vem o dinheiro agora.">
+        <Q label="Canais de aquisição ativos (pode marcar mais de um)">
           <div className="option-row">
-            {["Premium", "Acessível", "Alto padrão", "Conceitual", "Técnico", "Inovador"].map(v => (
-              <Radio key={v} value={v} current={data.positioning} onChange={set("positioning")}>{v}</Radio>
+            {["Indicação", "Instagram", "Google", "LinkedIn", "Outbound / cold", "Eventos", "Marketplace", "Outros"].map(v => (
+              <Check key={v} value={v} current={d.revenueChannels} onChange={setArr("revenueChannels")}>{v}</Check>
             ))}
           </div>
-        </div>
+        </Q>
+      </Block>
 
-        <div className="onboarding-field">
-          <p className="onboarding-question">O que diferencia vocês hoje?</p>
-          <textarea
-            className="onboarding-textarea"
-            rows={3}
-            placeholder="Deixa eles falarem livremente — anote aqui..."
-            value={data.differentiator}
-            onChange={e => set("differentiator")(e.target.value)}
-          />
+      {/* 3 — Produto/Serviço */}
+      <Block num="03" title="Produto e cliente" hint="Os números que definem a saúde comercial do negócio.">
+        <div className="ob-three-col">
+          <Q label="Ticket médio">
+            <input className="ob-input" type="text" placeholder="Ex: R$ 8.000 / mês" value={d.avgTicket} onChange={e => set("avgTicket")(e.target.value)} />
+          </Q>
+          <Q label="Perfil do cliente ideal">
+            <input className="ob-input" type="text" placeholder="Ex: Dono de e-commerce com equipe" value={d.idealClient} onChange={e => set("idealClient")(e.target.value)} />
+          </Q>
+          <Q label="Tempo médio de fechamento">
+            <input className="ob-input" type="text" placeholder="Ex: 2 semanas" value={d.closingTime} onChange={e => set("closingTime")(e.target.value)} />
+          </Q>
         </div>
-      </section>
+      </Block>
 
-      {/* ── Seção 4: Problema atual ── */}
-      <section className="panel-shell">
-        <SectionHeader num="4" title="Problema atual" subtitle="O maior gargalo que impede o crescimento hoje." />
-        <div className="onboarding-field">
-          <p className="onboarding-question">Hoje o maior problema é:</p>
-          <div className="option-row option-row--wrap">
-            {["Falta de leads", "Leads desqualificados", "Baixa conversão", "Falta de previsibilidade", "Ticket baixo", "Equipe pequena", "Dependência de indicação"].map(v => (
-              <Radio key={v} value={v} current={data.mainProblem} onChange={set("mainProblem")}>{v}</Radio>
+      {/* 4 — Posicionamento */}
+      <Block num="04" title="Posicionamento" hint="Como querem ser percebidos no mercado.">
+        <Q label="Como querem ser vistos? (pode marcar mais de um)">
+          <div className="option-row">
+            {["Premium", "Alto padrão", "Acessível", "Técnico", "Inovador", "Conceitual", "Referência no nicho"].map(v => (
+              <Check key={v} value={v} current={d.positioning} onChange={setArr("positioning")}>{v}</Check>
             ))}
           </div>
-        </div>
-      </section>
+        </Q>
+        <Q label="O que diferencia vocês hoje?">
+          <textarea className="ob-textarea" rows={2} placeholder="Deixa eles falarem — anote aqui..." value={d.differentiator} onChange={e => set("differentiator")(e.target.value)} />
+        </Q>
+      </Block>
 
-      {/* ── Seção 5: Objetivo com tráfego ── */}
-      <section className="panel-shell">
-        <SectionHeader num="5" title="Objetivo com tráfego" subtitle="O que querem conseguir com marketing digital." />
-        <div className="onboarding-field">
-          <p className="onboarding-question">O que querem hoje? <em>(pode marcar mais de um)</em></p>
-          <div className="option-row option-row--wrap">
-            {["Mais clientes", "Mais qualidade nos leads", "Posicionamento de marca", "Escala", "Reduzir dependência de indicação", "Entrar em novo segmento"].map(v => (
-              <Check key={v} value={v} current={data.trafficGoal} onChange={setArr("trafficGoal")}>{v}</Check>
+      {/* 5 — Problema atual */}
+      <Block num="05" title="Problema atual" hint="O gargalo que está impedindo o crescimento — o mais importante de entender.">
+        <Q label="Hoje o maior problema é:">
+          <div className="option-row">
+            {["Falta de leads", "Leads desqualificados", "Baixa conversão", "Falta de previsibilidade", "Ticket baixo", "Dependência de indicação", "Time pequeno"].map(v => (
+              <Radio key={v} value={v} current={d.mainProblem} onChange={set("mainProblem")}>{v}</Radio>
             ))}
           </div>
-        </div>
-      </section>
+        </Q>
+      </Block>
 
-      {/* ── Seção 6: Estrutura atual ── */}
-      <section className="panel-shell">
-        <SectionHeader num="6" title="Estrutura atual" subtitle="O que já existe rodando hoje." />
-        <div className="infra-grid">
-          {([
-            ["Instagram ativo?", "hasInstagram"],
-            ["Google ativo?", "hasGoogle"],
-            ["Site?", "hasSite"],
-            ["CRM?", "hasCrm"]
-          ] as const).map(([label, field]) => (
-            <div key={field} className="infra-item">
-              <p className="onboarding-question">{label}</p>
-              <YesNo value={data[field]} onChange={set(field)} />
+      {/* 6 — Objetivo */}
+      <Block num="06" title="Objetivo com tráfego e marketing" hint="O que querem conquistar com uma estratégia de crescimento.">
+        <Q label="O que querem hoje? (pode marcar mais de um)">
+          <div className="option-row">
+            {["Mais clientes", "Leads mais qualificados", "Posicionamento de marca", "Escala rápida", "Menos dependência de indicação", "Entrar em novo segmento", "Aumentar ticket"].map(v => (
+              <Check key={v} value={v} current={d.trafficGoal} onChange={setArr("trafficGoal")}>{v}</Check>
+            ))}
+          </div>
+        </Q>
+      </Block>
+
+      {/* 7 — Estrutura */}
+      <Block num="07" title="Estrutura digital atual" hint="O que já existe rodando hoje.">
+        <div className="ob-infra-grid">
+          {([["Instagram ativo?", "hasInstagram"], ["Google ativo?", "hasGoogle"], ["Site?", "hasSite"], ["CRM?", "hasCrm"]] as const).map(([label, field]) => (
+            <div key={field} className="ob-infra-item">
+              <p className="ob-infra-label">{label}</p>
+              <YesNo value={d[field]} onChange={set(field)} />
             </div>
           ))}
         </div>
-      </section>
+      </Block>
 
-      {/* ── Seção 7: Processo comercial ── */}
-      <section className="panel-shell">
-        <SectionHeader num="7" title="Processo comercial" subtitle="Como os leads são tratados depois que chegam." />
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Quem responde os leads?</p>
+      {/* 8 — Processo comercial */}
+      <Block num="08" title="Processo comercial" hint="Como os leads são tratados depois que chegam.">
+        <Q label="Quem responde os leads?">
           <div className="option-row">
-            <Radio value="dono" current={data.leadResponder} onChange={set("leadResponder")}>Dono</Radio>
-            <Radio value="equipe" current={data.leadResponder} onChange={set("leadResponder")}>Equipe</Radio>
-            <Radio value="misto" current={data.leadResponder} onChange={set("leadResponder")}>Misto</Radio>
-          </div>
-        </div>
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Tempo de resposta ao lead:</p>
-          <div className="option-row">
-            <Radio value="imediato" current={data.responseTime} onChange={set("responseTime")}>Imediato</Radio>
-            <Radio value="horas" current={data.responseTime} onChange={set("responseTime")}>Horas</Radio>
-            <Radio value="dias" current={data.responseTime} onChange={set("responseTime")}>Dias</Radio>
-          </div>
-        </div>
-
-        <div className="onboarding-field">
-          <p className="onboarding-question">Existe qualificação antes da reunião?</p>
-          <YesNo value={data.hasQualification} onChange={set("hasQualification")} />
-        </div>
-      </section>
-
-      {/* ── Seção 8: Investimento ── */}
-      <section className="panel-shell">
-        <SectionHeader num="8" title="Investimento" subtitle="Budget disponível para marketing." />
-        <div className="onboarding-field">
-          <p className="onboarding-question">Quanto pretendem investir inicialmente?</p>
-          <div className="option-row option-row--wrap">
-            {["Até R$ 1.000", "R$ 1k – R$ 3k", "R$ 3k – R$ 10k", "Acima de R$ 10k"].map(v => (
-              <Radio key={v} value={v} current={data.investmentRange} onChange={set("investmentRange")}>{v}</Radio>
+            {["Dono", "Equipe", "Misto"].map(v => (
+              <Radio key={v} value={v} current={d.leadResponder} onChange={set("leadResponder")}>{v}</Radio>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* ── Seção 9 + 10: Meta + Valor ── */}
-      <section className="panel-shell">
-        <SectionHeader num="9–10" title="Meta real e valor do cliente" subtitle="Os números que constroem o ROI na cabeça deles." />
-        <div className="segment-grid">
-          <div className="onboarding-field">
-            <p className="onboarding-question">Quantos clientes por mês já seria suficiente?</p>
-            <input
-              className="onboarding-input"
-              type="text"
-              placeholder="Ex: 3 clientes novos por mês"
-              value={data.clientsPerMonth}
-              onChange={e => set("clientsPerMonth")(e.target.value)}
-            />
+        </Q>
+        <Q label="Tempo de resposta ao lead:">
+          <div className="option-row">
+            {["Imediato", "Horas", "Dias"].map(v => (
+              <Radio key={v} value={v} current={d.responseTime} onChange={set("responseTime")}>{v}</Radio>
+            ))}
           </div>
-          <div className="onboarding-field">
-            <p className="onboarding-question">Um cliente fechado representa quanto em média?</p>
-            <input
-              className="onboarding-input"
-              type="text"
-              placeholder="Ex: R$ 180.000 em receita"
-              value={data.clientValue}
-              onChange={e => set("clientValue")(e.target.value)}
-            />
+        </Q>
+        <Q label="Existe qualificação antes da reunião?">
+          <YesNo value={d.hasQualification} onChange={set("hasQualification")} />
+        </Q>
+      </Block>
+
+      {/* 9 — Investimento */}
+      <Block num="09" title="Investimento em marketing" hint="Budget disponível para colocar o plano em prática.">
+        <Q label="Quanto pretendem investir inicialmente?">
+          <div className="option-row">
+            {["Até R$ 1.000", "R$ 1k – R$ 3k", "R$ 3k – R$ 10k", "Acima de R$ 10k"].map(v => (
+              <Radio key={v} value={v} current={d.investmentRange} onChange={set("investmentRange")}>{v}</Radio>
+            ))}
           </div>
-        </div>
-      </section>
+        </Q>
+      </Block>
 
-      {/* ── Seção 11: Alinhamento final ── */}
-      <section className="panel-shell">
-        <SectionHeader num="11" title="Alinhamento final" subtitle='Você fala: "Se a gente trouxer X clientes por mês, já resolve o cenário de vocês?"' />
-        <div className="onboarding-field">
-          <p className="onboarding-question">Observações finais / contexto da reunião:</p>
-          <textarea
-            className="onboarding-textarea"
-            rows={3}
-            placeholder="Anote objeções, sinais, contexto adicional que vai ajudar a IA a personalizar o plano..."
-            value={data.alignmentNote}
-            onChange={e => set("alignmentNote")(e.target.value)}
-          />
+      {/* 10 — Meta e ROI */}
+      <Block num="10" title="Meta real e ROI" hint='A pergunta que fecha: "Se a gente trouxer X clientes por mês, já resolve?"'>
+        <div className="ob-two-col">
+          <Q label="Quantos clientes por mês já seria suficiente?">
+            <input className="ob-input" type="text" placeholder="Ex: 4 novos clientes/mês" value={d.clientsPerMonth} onChange={e => set("clientsPerMonth")(e.target.value)} />
+          </Q>
+          <Q label="Um cliente fechado representa quanto em média?">
+            <input className="ob-input" type="text" placeholder="Ex: R$ 15.000 de receita" value={d.clientValue} onChange={e => set("clientValue")(e.target.value)} />
+          </Q>
         </div>
-
-        {/* ROI preview */}
-        {data.clientsPerMonth && data.clientValue ? (
-          <div className="roi-preview">
+        {d.clientsPerMonth && d.clientValue ? (
+          <div className="ob-roi-preview">
             <span className="section-kicker">Preview de ROI</span>
-            <p>
-              Se a gente trouxer <strong>{data.clientsPerMonth}</strong> e cada cliente vale <strong>{data.clientValue}</strong> — mostre esse número antes de fechar.
-            </p>
+            <p>Com <strong>{d.clientsPerMonth}</strong> e ticket de <strong>{d.clientValue}</strong> — construa esse número na cabeça deles antes de fechar.</p>
           </div>
         ) : null}
-      </section>
+        <Q label="Observações da reunião (objeções, contexto, sinais):">
+          <textarea className="ob-textarea" rows={2} placeholder="Anote tudo que vai ajudar a IA a personalizar o plano..." value={d.notes} onChange={e => set("notes")(e.target.value)} />
+        </Q>
+      </Block>
 
-      {/* ── CTA ── */}
+      {/* CTA */}
       {error ? <p className="form-feedback form-feedback--error">{error}</p> : null}
-
-      <div className="workspace-actions" style={{ marginTop: 8, marginBottom: 8 }}>
-        <button type="button" className="primary-button" onClick={() => void runAnalysis()} disabled={loading}>
+      <div className="workspace-actions" style={{ marginTop: 8 }}>
+        <button type="button" className="primary-button" onClick={() => void run()} disabled={loading}>
           {loading ? "Analisando negócio..." : "Gerar plano de crescimento"}
         </button>
         {report ? (
-          <button type="button" className="ghost-button" onClick={() => { setReport(null); setData(EMPTY); setError(null); }}>
+          <button type="button" className="ghost-button" onClick={() => { setReport(null); setD(EMPTY); setError(null); }}>
             Novo onboarding
           </button>
         ) : null}
       </div>
 
-      {/* ── Loading ── */}
+      {/* Loading */}
       {loading ? (
-        <section className="panel-shell" style={{ textAlign: "center", padding: "48px 24px" }}>
+        <section className="panel-shell" style={{ textAlign: "center", padding: "48px 24px", marginTop: 20 }}>
           <div className="growth-loading__pulse" style={{ margin: "0 auto 20px" }} />
           <p className="section-kicker">Processando</p>
           <h3 style={{ margin: "8px 0 0" }}>Analista de growth trabalhando...</h3>
@@ -475,72 +334,50 @@ export function GrowthAnalystWorkspace() {
         </section>
       ) : null}
 
-      {/* ── Report ── */}
+      {/* Report */}
       {report && !loading ? (
         <>
-          {/* Score cards */}
-          <div className="metrics-grid" style={{ marginTop: 8 }}>
+          <div className="metrics-grid" style={{ marginTop: 20 }}>
             <ScoreCard label="Growth Score" value={`${report.growthScore}`} tone="violet" hint="Potencial de crescimento com os recursos atuais." />
-            <ScoreCard label="Meta / mês" value={data.clientsPerMonth || "—"} tone="cyan" hint="Volume que já muda o cenário da operação." />
-            <ScoreCard label="Valor por cliente" value={data.clientValue || "—"} tone="green" hint="Receita média por fechamento." />
-            <ScoreCard label="Investimento" value={data.investmentRange || "—"} tone="blue" hint="Budget disponível para ativar o crescimento." />
+            <ScoreCard label="Meta mensal" value={d.clientsPerMonth || "—"} tone="cyan" hint="Volume que muda o cenário da operação." />
+            <ScoreCard label="Valor por cliente" value={d.clientValue || "—"} tone="green" hint="Receita média por fechamento." />
+            <ScoreCard label="Investimento" value={d.investmentRange || "—"} tone="blue" hint="Budget disponível para ativar o crescimento." />
           </div>
 
-          {/* Bottleneck + Diagnosis */}
           <section className="panel-shell">
-            <div className="panel-header">
-              <div>
-                <p className="section-kicker">Diagnóstico</p>
-                <h3 style={{ margin: "8px 0 0" }}>{report.diagnosis.title}</h3>
-              </div>
-            </div>
-            <blockquote className="growth-bottleneck-quote" style={{ marginTop: 16 }}>
-              {report.bottleneck}
-            </blockquote>
+            <p className="section-kicker">Diagnóstico</p>
+            <h3 style={{ margin: "8px 0 16px" }}>{report.diagnosis.title}</h3>
+            <blockquote className="growth-bottleneck-quote">{report.bottleneck}</blockquote>
             <p style={{ color: "var(--muted)", lineHeight: 1.7, margin: "12px 0 0" }}>{report.diagnosis.body}</p>
           </section>
 
-          {/* Opportunities */}
           <section className="panel-shell">
-            <div className="panel-header">
-              <div>
-                <p className="section-kicker">Oportunidades</p>
-                <h3 style={{ margin: "8px 0 0" }}>Alavancas identificadas</h3>
-              </div>
-            </div>
+            <p className="section-kicker">Oportunidades</p>
+            <h3 style={{ margin: "8px 0 16px" }}>Alavancas identificadas</h3>
             <div className="growth-opportunities-grid" style={{ marginTop: 0 }}>
               {report.opportunities.map((opp, i) => (
                 <article key={i} className="scheduled-card" style={{ display: "block", padding: "18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
                     <h4 style={{ margin: 0 }}>{opp.title}</h4>
-                    <span className={`status-pill status-pill--${opp.priority === "alta" ? "pending" : opp.priority === "media" ? "approved" : "scheduled"}`}>
-                      {opp.priority}
-                    </span>
+                    <span className={`status-pill status-pill--${opp.priority === "alta" ? "pending" : opp.priority === "media" ? "approved" : "scheduled"}`}>{opp.priority}</span>
                   </div>
-                  <p style={{ marginTop: 10, color: "var(--muted)", lineHeight: 1.6 }}>{opp.body}</p>
+                  <p style={{ margin: 0, color: "var(--muted)", lineHeight: 1.6 }}>{opp.body}</p>
                 </article>
               ))}
             </div>
           </section>
 
-          {/* Roadmap */}
           <section className="panel-shell">
-            <div className="panel-header">
-              <div>
-                <p className="section-kicker">Plano de execução</p>
-                <h3 style={{ margin: "8px 0 0" }}>Roadmap 30 / 60 / 90 dias</h3>
-              </div>
-            </div>
+            <p className="section-kicker">Plano de execução</p>
+            <h3 style={{ margin: "8px 0 0" }}>Roadmap 30 / 60 / 90 dias</h3>
             <div className="growth-phase-tabs">
-              {(["days30", "days60", "days90"] as const).map(phase => (
-                <button key={phase} type="button" className={`growth-phase-tab${activePhase === phase ? " is-active" : ""}`} onClick={() => setActivePhase(phase)}>
-                  {phaseLabel[phase]}
-                </button>
+              {(["days30", "days60", "days90"] as const).map(p => (
+                <button key={p} type="button" className={`growth-phase-tab${phase === p ? " is-active" : ""}`} onClick={() => setPhase(p)}>{phaseLabel[p]}</button>
               ))}
             </div>
             <div className="scheduled-list" style={{ marginTop: 0 }}>
-              {report.roadmap[activePhase].map((item, i) => (
-                <div key={i} className="scheduled-card" style={{ gridTemplateColumns: "32px 1fr", gap: "14px", padding: "14px 16px" }}>
+              {report.roadmap[phase].map((item, i) => (
+                <div key={i} className="scheduled-card" style={{ gridTemplateColumns: "32px 1fr", gap: 14, padding: "14px 16px" }}>
                   <span className="growth-roadmap-item__num">{String(i + 1).padStart(2, "0")}</span>
                   <div>
                     <strong>{item.action}</strong>
@@ -551,7 +388,6 @@ export function GrowthAnalystWorkspace() {
             </div>
           </section>
 
-          {/* Next moves + Content strategy */}
           <div className="growth-bottom-grid" style={{ marginTop: 0 }}>
             <section className="panel-shell" style={{ marginTop: 0 }}>
               <p className="section-kicker">Próximos movimentos</p>
@@ -561,7 +397,7 @@ export function GrowthAnalystWorkspace() {
                   <article key={i} className="scheduled-card" style={{ display: "block", padding: "16px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <span style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(var(--glow-cyan),0.14)", color: "var(--cyan)", display: "grid", placeItems: "center", fontSize: "0.82rem", fontWeight: 700 }}>{i + 1}</span>
-                      <span className={`format-pill`} style={{ fontSize: "0.75rem" }}>{move.effort}</span>
+                      <span className="format-pill">{move.effort}</span>
                     </div>
                     <strong style={{ display: "block", marginBottom: 6 }}>{move.move}</strong>
                     <p style={{ margin: 0, color: "var(--muted)", fontSize: "0.88rem", lineHeight: 1.55 }}>{move.impact}</p>
@@ -588,7 +424,6 @@ export function GrowthAnalystWorkspace() {
             </section>
           </div>
 
-          {/* KPIs */}
           <section className="panel-shell" style={{ marginTop: 0, marginBottom: 20 }}>
             <p className="section-kicker">Métricas de controle</p>
             <h3 style={{ margin: "8px 0 16px" }}>KPIs para acompanhar</h3>
