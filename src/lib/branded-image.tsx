@@ -31,11 +31,6 @@ const CARD_TEMPLATES: CardTemplate[] = [
   { bg: "linear-gradient(155deg,#0B0112 0%,#1C0035 100%)", accent: "#BC13FE", text: "#FFFFFF", tagBg: "rgba(188,19,254,0.18)", tagColor: "#BC13FE", tagBorder: "1px solid rgba(188,19,254,0.5)" },
   { bg: "linear-gradient(155deg,#001A22 0%,#003D55 100%)", accent: "#00F2FF", text: "#FFFFFF", tagBg: "rgba(0,242,255,0.14)", tagColor: "#00F2FF", tagBorder: "1px solid rgba(0,242,255,0.4)" },
   { bg: "linear-gradient(155deg,#120010 0%,#280028 100%)", accent: "#FF00E5", text: "#FFFFFF", tagBg: "rgba(255,0,229,0.14)", tagColor: "#FF00E5", tagBorder: "1px solid rgba(255,0,229,0.4)" },
-  { bg: "linear-gradient(155deg,#001208 0%,#00280F 100%)", accent: "#00FF88", text: "#FFFFFF", tagBg: "rgba(0,255,136,0.12)", tagColor: "#00FF88", tagBorder: "1px solid rgba(0,255,136,0.35)" },
-  { bg: "linear-gradient(155deg,#140800 0%,#2D1500 100%)", accent: "#FFB800", text: "#FFFFFF", tagBg: "rgba(255,184,0,0.14)", tagColor: "#FFB800", tagBorder: "1px solid rgba(255,184,0,0.4)" },
-  { bg: "linear-gradient(155deg,#140008 0%,#280018 100%)", accent: "#FF3366", text: "#FFFFFF", tagBg: "rgba(255,51,102,0.14)", tagColor: "#FF3366", tagBorder: "1px solid rgba(255,51,102,0.4)" },
-  { bg: "linear-gradient(155deg,#080D1E 0%,#101A3A 100%)", accent: "#7B9FFF", text: "#FFFFFF", tagBg: "rgba(123,159,255,0.14)", tagColor: "#7B9FFF", tagBorder: "1px solid rgba(123,159,255,0.4)" },
-  { bg: "#000000", accent: "#FFFFFF", text: "#FFFFFF", tagBg: "rgba(255,255,255,0.08)", tagColor: "rgba(255,255,255,0.9)", tagBorder: "1px solid rgba(255,255,255,0.25)" }
 ];
 
 const PILLAR_LABELS: Record<string, string> = {
