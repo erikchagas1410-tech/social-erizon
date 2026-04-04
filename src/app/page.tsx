@@ -14,7 +14,7 @@ export default function HomePage() {
           <Link href="/command-center" className="primary-button">
             Abrir Command Center
           </Link>
-          <Link href="/growth-analyst" className="ghost-button">
+          <Link href="/growth-analyst" className="primary-button primary-button--growth">
             Analista de Growth
           </Link>
         </div>

@@ -73,6 +73,32 @@ button {
   padding: 32px;
 }
 
+.landing-shell--wide {
+  align-items: start;
+  padding-top: 48px;
+}
+
+.growth-analyst-page {
+  width: min(900px, 100%);
+}
+
+.growth-analyst-page__header {
+  margin-bottom: 32px;
+}
+
+.growth-analyst-page__title {
+  margin: 8px 0 0;
+  font-family: var(--title-font);
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  letter-spacing: 0.04em;
+}
+
+.growth-analyst-page__subtitle {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
 .error-shell {
   width: min(780px, 100%);
   margin: 8vh auto 0;
@@ -307,6 +333,11 @@ button {
 .primary-button.secondary {
   background: linear-gradient(135deg, rgba(var(--glow-blue), 0.85), rgba(var(--glow-cyan), 0.82));
   box-shadow: 0 12px 28px rgba(var(--glow-blue), 0.18);
+}
+
+.primary-button--growth {
+  background: linear-gradient(135deg, rgba(var(--glow-blue), 0.9), rgba(var(--glow-cyan), 0.85));
+  box-shadow: 0 12px 28px rgba(var(--glow-blue), 0.22);
 }
 
 .ghost-button {
