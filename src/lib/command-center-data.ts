@@ -12,6 +12,7 @@ export const navGroups: NavGroup[] = [
   {
     label: "Inteligencia",
     items: [
+      { label: "Analista de Growth", href: "/growth-analyst" },
       { label: "Audiencia IA", href: "/audience-ai" },
       { label: "Analytics", href: "/analytics" }
     ]
