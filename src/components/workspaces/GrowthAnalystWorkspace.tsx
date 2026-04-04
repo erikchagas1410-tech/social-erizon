@@ -1,34 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { GrowthReport } from "@/types/growth-analyst";
-
-/* ─── Types ──────────────────────────────────────────────────────── */
-
-interface OnboardingData {
-  companyName: string;
-  niche: string;
-  stage: string;
-  revenueChannels: string[];
-  avgTicket: string;
-  idealClient: string;
-  closingTime: string;
-  positioning: string[];
-  differentiator: string;
-  mainProblem: string;
-  trafficGoal: string[];
-  hasInstagram: string;
-  hasGoogle: string;
-  hasSite: string;
-  hasCrm: string;
-  leadResponder: string;
-  responseTime: string;
-  hasQualification: string;
-  investmentRange: string;
-  clientsPerMonth: string;
-  clientValue: string;
-  notes: string;
-}
+import type { GrowthReport, OnboardingData } from "@/types/growth-analyst";
 
 const EMPTY: OnboardingData = {
   companyName: "", niche: "", stage: "",
@@ -114,9 +87,21 @@ function ScoreCard({ label, value, tone, hint }: { label: string; value: string;
 
 /* ─── Main ───────────────────────────────────────────────────────── */
 
-export function GrowthAnalystWorkspace() {
-  const [d, setD] = useState<OnboardingData>(EMPTY);
-  const [report, setReport] = useState<GrowthReport | null>(null);
+interface WorkspaceProps {
+  initialData?: OnboardingData;
+  initialReport?: GrowthReport;
+  readOnly?: boolean;
+  onGenerated?: () => void;
+}
+
+export function GrowthAnalystWorkspace({
+  initialData,
+  initialReport,
+  readOnly = false,
+  onGenerated
+}: WorkspaceProps = {}) {
+  const [d, setD] = useState<OnboardingData>(initialData ?? EMPTY);
+  const [report, setReport] = useState<GrowthReport | null>(initialReport ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [phase, setPhase] = useState<"days30" | "days60" | "days90">("days30");
@@ -148,12 +133,14 @@ export function GrowthAnalystWorkspace() {
             investimento: d.investmentRange,
             metaMensal: d.clientsPerMonth,
             valorCliente: d.clientValue
-          })
+          }),
+          _raw: d
         })
       });
       const json = (await res.json()) as GrowthReport & { error?: string };
       if (!res.ok) throw new Error(json.error ?? "Erro");
       setReport(json);
+      onGenerated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha desconhecida.");
     } finally {
@@ -165,6 +152,8 @@ export function GrowthAnalystWorkspace() {
 
   return (
     <>
+      {/* Form blocks — hidden when viewing a past session */}
+      {!readOnly && (<>
       {/* 1 — Identificação */}
       <Block num="01" title="Identificação da empresa" hint="Nome e nicho — personaliza toda a análise.">
         <div className="ob-two-col">
@@ -311,7 +300,10 @@ export function GrowthAnalystWorkspace() {
         </Q>
       </Block>
 
-      {/* CTA */}
+      </>)}
+
+      {/* CTA — only in new mode */}
+      {!readOnly && (<>
       {error ? <p className="form-feedback form-feedback--error">{error}</p> : null}
       <div className="workspace-actions" style={{ marginTop: 8 }}>
         <button type="button" className="primary-button" onClick={() => void run()} disabled={loading}>
@@ -323,6 +315,7 @@ export function GrowthAnalystWorkspace() {
           </button>
         ) : null}
       </div>
+      </>)}
 
       {/* Loading */}
       {loading ? (

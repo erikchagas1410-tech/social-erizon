@@ -1198,6 +1198,106 @@ button {
   }
 }
 
+/* ─── Growth history panel ─────────────────────────────────────── */
+
+.growth-history-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px 16px;
+}
+
+.growth-history-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.growth-history-new-btn {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(var(--glow-violet), 0.9), rgba(var(--glow-blue), 0.85));
+  color: white;
+  transition: transform 140ms ease;
+}
+
+.growth-history-new-btn:hover {
+  transform: translateY(-1px);
+}
+
+.growth-history-list {
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: calc(100vh - 160px);
+}
+
+.growth-history-empty {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.65;
+  margin: 8px 0 0;
+  padding: 0 4px;
+}
+
+.growth-history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 140ms ease, border-color 140ms ease;
+  cursor: pointer;
+}
+
+.growth-history-item:hover {
+  background: rgba(var(--glow-blue), 0.08);
+  border-color: rgba(var(--glow-blue), 0.3);
+}
+
+.growth-history-item.is-active {
+  background: rgba(var(--glow-violet), 0.1);
+  border-color: rgba(var(--glow-violet), 0.4);
+}
+
+.growth-history-item__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.growth-history-item__name {
+  font-size: 0.88rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.growth-history-item__niche {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 6px;
+}
+
+.growth-history-item__date {
+  display: block;
+  font-size: 0.72rem;
+  color: rgba(var(--glow-cyan), 0.7);
+  letter-spacing: 0.02em;
+}
+
 @media (max-width: 920px) {
   .command-center-shell {
     padding: 16px;

@@ -11,6 +11,42 @@ export interface GrowthOnboarding {
   whatFailed: string;
 }
 
+export interface OnboardingData {
+  companyName: string;
+  niche: string;
+  stage: string;
+  revenueChannels: string[];
+  avgTicket: string;
+  idealClient: string;
+  closingTime: string;
+  positioning: string[];
+  differentiator: string;
+  mainProblem: string;
+  trafficGoal: string[];
+  hasInstagram: string;
+  hasGoogle: string;
+  hasSite: string;
+  hasCrm: string;
+  leadResponder: string;
+  responseTime: string;
+  hasQualification: string;
+  investmentRange: string;
+  clientsPerMonth: string;
+  clientValue: string;
+  notes: string;
+}
+
+export interface GrowthSession {
+  id: string;
+  company_name: string;
+  niche: string;
+  stage: string;
+  growth_score: number;
+  onboarding_data: OnboardingData;
+  report: GrowthReport;
+  created_at: string;
+}
+
 export interface GrowthReport {
   diagnosis: { title: string; body: string };
   opportunities: Array<{ title: string; body: string; priority: "alta" | "media" | "baixa" }>;

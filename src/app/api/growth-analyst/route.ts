@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { GrowthOnboarding, GrowthReport } from "@/types/growth-analyst";
+import type { GrowthOnboarding, GrowthReport, OnboardingData } from "@/types/growth-analyst";
+import { saveGrowthSession, listGrowthSessions } from "@/lib/growth-history";
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+export async function GET() {
+  const sessions = await listGrowthSessions();
+  return NextResponse.json(sessions);
+}
+
 export async function POST(req: NextRequest) {
-  const body = (await req.json()) as GrowthOnboarding;
+  const body = (await req.json()) as GrowthOnboarding & { _raw?: OnboardingData };
+  const rawData = body._raw;
 
   const apiKey = process.env.GROQ_API_KEY;
 
@@ -116,6 +123,11 @@ Gere 4 oportunidades, 3 ações por fase do roadmap, 2-3 canais na estratégia d
 
     const raw = data.choices?.[0]?.message?.content ?? "{}";
     const report = JSON.parse(raw) as GrowthReport;
+
+    // Save to history (non-blocking)
+    if (rawData) {
+      void saveGrowthSession(rawData, report);
+    }
 
     return NextResponse.json(report);
   } catch (err) {
