@@ -166,13 +166,14 @@ body::after{content:'';position:fixed;width:700px;height:700px;top:-200px;right:
   </div>
   <div class="nav-group">
     <div class="nav-lbl">Inteligência</div>
+    <div class="nav-item" onclick="location.href='/growth-analyst'"><span class="nav-ico">📈</span><span>Analista de Growth</span></div>
     <div class="nav-item" onclick="show('intelligence')"><span class="nav-ico">🧠</span><span>Audiência IA</span></div>
     <div class="nav-item" onclick="show('analytics')"><span class="nav-ico">📊</span><span>Analytics</span></div>
   </div>
   <div class="nav-group">
     <div class="nav-lbl">Produção</div>
-    <div class="nav-item" onclick="show('generate')"><span class="nav-ico">✨</span><span>Gerar Conteúdo</span></div>
-    <div class="nav-item" onclick="show('studio')"><span class="nav-ico">🎨</span><span>Estúdio de Design</span></div>
+    <div class="nav-item" onclick="location.href='/generate-content'"><span class="nav-ico">✨</span><span>Gerar Conteúdo</span></div>
+    <div class="nav-item" onclick="location.href='/design-studio'"><span class="nav-ico">🎨</span><span>Estúdio de Design</span></div>
   </div>
   <div class="sb-footer">
     <div class="status-pill">
