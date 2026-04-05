@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { GrowthSession } from "@/types/growth-analyst";
 import { GrowthHistoryPanel } from "@/components/growth/GrowthHistoryPanel";
 import { GrowthAnalystWorkspace } from "@/components/workspaces/GrowthAnalystWorkspace";
@@ -47,6 +48,11 @@ export function GrowthAnalystApp() {
                 ? `${selectedSession.niche} — ${selectedSession.stage} — Score ${selectedSession.growth_score}`
                 : "Diagnostico estrategico e plano de escala baseado no contexto do seu negocio"}
             </p>
+          </div>
+          <div className="top-header__actions">
+            <Link href="/command-center" className="ghost-button">
+              Command Center
+            </Link>
           </div>
         </header>
 
