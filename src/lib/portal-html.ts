@@ -217,11 +217,12 @@ body::after{content:'';position:fixed;width:700px;height:700px;top:-200px;right:
     <div style="margin-top:18px;" class="card card-p">
       <div class="ch"><span class="ct">🚀 Ações Rápidas</span></div>
       <div class="cb">
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
           <button class="btn btn-p" style="justify-content:center;flex-direction:column;height:78px;gap:4px;" onclick="show('approval')"><span style="font-size:22px;">✅</span><span style="font-size:11px;">Revisar Fila</span></button>
           <button class="btn btn-g" style="justify-content:center;flex-direction:column;height:78px;gap:4px;border-color:rgba(188,19,254,.2);color:rgba(188,19,254,.8);" onclick="gotoIntel()"><span style="font-size:22px;">🧠</span><span style="font-size:11px;">Analisar Audiência</span></button>
           <button class="btn btn-g" style="justify-content:center;flex-direction:column;height:78px;gap:4px;border-color:rgba(255,0,229,.2);color:rgba(255,0,229,.8);" onclick="show('generate')"><span style="font-size:22px;">✨</span><span style="font-size:11px;">Novo Post IA</span></button>
           <button class="btn btn-g" style="justify-content:center;flex-direction:column;height:78px;gap:4px;" onclick="show('analytics')"><span style="font-size:22px;">📊</span><span style="font-size:11px;">Analytics</span></button>
+          <a href="/growth-analyst" class="btn btn-neon" style="justify-content:center;flex-direction:column;height:78px;gap:4px;"><span style="font-size:22px;">📈</span><span style="font-size:11px;">Growth Analyst</span></a>
         </div>
       </div>
     </div>
