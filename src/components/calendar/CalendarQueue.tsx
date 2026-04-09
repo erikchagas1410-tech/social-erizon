@@ -1,4 +1,4 @@
-import { cancelSchedule, reschedulePost } from "@/app/calendar/actions";
+﻿import { cancelSchedule, reschedulePost } from "@/app/calendar/actions";
 import { CalendarPost } from "@/lib/calendar";
 
 type CalendarQueueProps = {
@@ -41,6 +41,12 @@ export function CalendarQueue({ posts }: CalendarQueueProps) {
                   {statusLabel[post.status]}
                 </span>
                 <span className="format-pill">{formatLabel[post.format]}</span>
+                {post.source === "super-agent" ? (
+                  <span className="format-pill">Super Agente</span>
+                ) : null}
+                {post.campaignStep ? (
+                  <span className="format-pill">{`Etapa ${post.campaignStep}`}</span>
+                ) : null}
               </div>
 
               <h4>{post.title}</h4>

@@ -14,6 +14,12 @@ type AnalyticsSummary = {
   topPosts: Array<{
     caption: string;
     engagement: number;
+    source: "manual" | "super-agent";
+  }>;
+  sourceBreakdown: Array<{
+    source: "manual" | "super-agent";
+    posts: number;
+    share: number;
   }>;
 };
 
@@ -151,6 +157,35 @@ export function AnalyticsWorkspace() {
         <div className="panel-shell">
           <div className="panel-header">
             <div>
+              <p className="section-kicker">Origem</p>
+              <h3>Manual vs Super Agente</h3>
+            </div>
+          </div>
+
+          <div className="top-posts-list">
+            {loading ? (
+              <p className="panel-header__copy">Carregando distribuicao...</p>
+            ) : data?.sourceBreakdown.length ? (
+              data.sourceBreakdown.map((item) => (
+                <article key={item.source} className="top-post-card">
+                  <span className="format-pill">
+                    {item.source === "super-agent" ? "Super Agente" : "Manual"}
+                  </span>
+                  <h4>{formatNumber(item.posts)} posts publicados</h4>
+                  <p>{item.share}% do volume publicado no periodo</p>
+                </article>
+              ))
+            ) : (
+              <p className="panel-header__copy">
+                Ainda nao existe volume publicado para comparar origens.
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="panel-shell">
+          <div className="panel-header">
+            <div>
               <p className="section-kicker">Top posts</p>
               <h3>Melhores entregas do periodo</h3>
             </div>
@@ -162,7 +197,9 @@ export function AnalyticsWorkspace() {
             ) : data?.topPosts.length ? (
               data.topPosts.map((post, index) => (
                 <article key={`${post.caption}-${index}`} className="top-post-card">
-                  <span className="format-pill">#{index + 1}</span>
+                  <span className="format-pill">
+                    #{index + 1} {post.source === "super-agent" ? "• SA" : "• Manual"}
+                  </span>
                   <h4>{post.caption}</h4>
                   <p>{formatNumber(post.engagement)} interacoes estimadas</p>
                 </article>

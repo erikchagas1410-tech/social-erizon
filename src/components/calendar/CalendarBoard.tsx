@@ -1,4 +1,4 @@
-import { CalendarPost } from "@/lib/calendar";
+﻿import { CalendarPost } from "@/lib/calendar";
 
 type CalendarBoardProps = {
   monthLabel: string;
@@ -55,9 +55,12 @@ export function CalendarBoard({ monthLabel, days }: CalendarBoardProps) {
                 <div
                   key={post.id}
                   className={`calendar-post calendar-post--${post.status}`}
-                  title={`${post.title} • ${statusLabel[post.status]}`}
+                  title={buildPostTitle(post)}
                 >
-                  <span>{post.title}</span>
+                  <span>
+                    {post.source === "super-agent" ? buildSourcePrefix(post) : ""}
+                    {post.title}
+                  </span>
                 </div>
               ))}
               {day.posts.length > 3 ? (
@@ -71,4 +74,26 @@ export function CalendarBoard({ monthLabel, days }: CalendarBoardProps) {
       </div>
     </section>
   );
+}
+
+function buildPostTitle(post: CalendarPost) {
+  const parts = [post.title, statusLabel[post.status]];
+
+  if (post.source === "super-agent") {
+    parts.push("Super Agente");
+  }
+
+  if (post.campaignStep) {
+    parts.push(`Etapa ${post.campaignStep}`);
+  }
+
+  return parts.join(" • ");
+}
+
+function buildSourcePrefix(post: CalendarPost) {
+  if (post.campaignStep) {
+    return `SA${post.campaignStep} • `;
+  }
+
+  return "SA • ";
 }

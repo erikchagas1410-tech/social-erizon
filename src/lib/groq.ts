@@ -17,6 +17,7 @@ type GenerateContentParams = {
   pillar?: ContentPillar | "";
   format?: ContentFormat | "";
   channels?: PublicationChannel[];
+  creativeBrief?: string;
 };
 
 type CreativeHistory = {
@@ -118,6 +119,7 @@ function buildUserPrompt(
     params.objective ? `Objetivo do conteudo: ${params.objective}.` : "",
     params.pillar ? `Pilar obrigatorio: ${params.pillar}.` : "",
     params.format ? `Formato obrigatorio: ${params.format}.` : "",
+    params.creativeBrief ? `Direcao extra obrigatoria: ${params.creativeBrief}.` : "",
     `Canais previstos: ${channels}.`,
     `Guia de formatos Instagram: feed retrato ${erizonBrand.platformGuidelines.instagram.recommendedFeedPortrait}, quadrado ${erizonBrand.platformGuidelines.instagram.square}, paisagem ${erizonBrand.platformGuidelines.instagram.landscape}, stories/reels ${erizonBrand.platformGuidelines.instagram.storiesAndReels}.`,
     `Guia de formatos LinkedIn: quadrado ${erizonBrand.platformGuidelines.linkedin.postSquare}, retrato ${erizonBrand.platformGuidelines.linkedin.postPortrait}, paisagem/link ${erizonBrand.platformGuidelines.linkedin.linkLandscape}.`,

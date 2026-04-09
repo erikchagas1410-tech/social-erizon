@@ -39,3 +39,13 @@ select
     )
   end as approval_rate
 from public.posts;
+
+create table if not exists public.super_agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  topic text not null,
+  objective text,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists super_agent_runs_created_at_idx on public.super_agent_runs(created_at desc);

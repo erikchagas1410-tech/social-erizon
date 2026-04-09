@@ -1,4 +1,4 @@
-import { deserializeContentPayload } from "@/lib/content-persistence";
+﻿import { deserializeContentPayload } from "@/lib/content-persistence";
 import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
 import { PostFormat, PostStatus } from "@/types/dashboard";
 
@@ -11,6 +11,8 @@ export type CalendarPost = {
   publishedAt: string | null;
   captionPreview: string;
   ideaCentral: string | null;
+  source: "manual" | "super-agent";
+  campaignStep: number | null;
 };
 
 type CalendarRow = {
@@ -21,6 +23,11 @@ type CalendarRow = {
   status: PostStatus;
   scheduled_for: string | null;
   published_at: string | null;
+};
+
+type PostOrigin = {
+  source: "manual" | "super-agent";
+  campaignStep: number | null;
 };
 
 export async function getCalendarPosts(
@@ -46,8 +53,16 @@ export async function getCalendarPosts(
     throw new Error(result.error.message);
   }
 
+  const originByPost = await getPostOrigins(
+    (result.data as CalendarRow[]).map((row) => row.id)
+  );
+
   return (result.data as CalendarRow[]).map((row) => {
     const content = deserializeContentPayload(row.caption);
+    const origin = originByPost[row.id] ?? {
+      source: "manual" as const,
+      campaignStep: null
+    };
 
     return {
       id: row.id,
@@ -57,9 +72,50 @@ export async function getCalendarPosts(
       scheduledFor: row.scheduled_for ?? new Date().toISOString(),
       publishedAt: row.published_at,
       captionPreview: content?.legenda ?? row.caption ?? "Sem legenda salva.",
-      ideaCentral: content?.ideia_central ?? null
+      ideaCentral: content?.ideia_central ?? null,
+      source: origin.source,
+      campaignStep: origin.campaignStep
     };
   });
+}
+
+async function getPostOrigins(postIds: string[]) {
+  if (!postIds.length) {
+    return {} as Record<string, PostOrigin>;
+  }
+
+  const supabase = getSupabaseClient();
+  const result = await supabase
+    .from("post_activities")
+    .select("post_id, message")
+    .in("post_id", postIds);
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  const map: Record<string, PostOrigin> = {};
+
+  for (const row of result.data as Array<{ post_id: string; message: string }>) {
+    const message = row.message.toLowerCase();
+    const campaignMatch = message.match(/etapa\s+(\d+)/i);
+
+    if (message.includes("super agente")) {
+      const current = map[row.post_id] ?? {
+        source: "super-agent" as const,
+        campaignStep: null
+      };
+
+      map[row.post_id] = {
+        source: "super-agent",
+        campaignStep: campaignMatch
+          ? Number.parseInt(campaignMatch[1], 10)
+          : current.campaignStep
+      };
+    }
+  }
+
+  return map;
 }
 
 export function getMonthBounds(year: number, monthIndex: number) {
@@ -71,3 +127,4 @@ export function getMonthBounds(year: number, monthIndex: number) {
     monthEnd
   };
 }
+

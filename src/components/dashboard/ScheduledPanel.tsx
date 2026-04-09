@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 import { approvePost, publishPost, schedulePost } from "@/app/command-center/actions";
 import { EmptyState } from "@/components/dashboard/EmptyState";
@@ -68,6 +68,12 @@ export function ScheduledPanel({ posts }: ScheduledPanelProps) {
                 {statusLabel[post.status]}
               </span>
               <span className="format-pill">{formatLabel[post.format]}</span>
+              {post.source === "super-agent" ? (
+                <span className="format-pill">Super Agente</span>
+              ) : null}
+              {post.campaignStep ? (
+                <span className="format-pill">{`Etapa ${post.campaignStep}`}</span>
+              ) : null}
             </div>
 
             <div className="scheduled-card__content">

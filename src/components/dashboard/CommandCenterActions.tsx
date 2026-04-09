@@ -28,6 +28,10 @@ export function CommandCenterActions() {
         Analista de Growth
       </Link>
 
+      <Link href="/super-agent" className="ghost-button">
+        Super Agente
+      </Link>
+
       <Link href="/generate-content" className="primary-button secondary">
         Gerar Post
       </Link>

@@ -1,4 +1,4 @@
-import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
+﻿import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
 import {
   ActivityItem,
   DashboardPayload,
@@ -23,6 +23,11 @@ type ActivityRow = {
   type: ActivityItem["type"];
   message: string;
   created_at: string;
+};
+
+type PostOrigin = {
+  source: "manual" | "super-agent";
+  campaignStep: number | null;
 };
 
 export async function getDashboardPayload(): Promise<DashboardPayload> {
@@ -88,6 +93,7 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
   const publishChannelsByPost = await getPublishedChannelsByPost(
     scheduledRows.map((row) => row.id)
   );
+  const originByPost = await getPostOrigins(scheduledRows.map((row) => row.id));
 
   return {
     stats: mapMetrics({
@@ -97,7 +103,11 @@ export async function getDashboardPayload(): Promise<DashboardPayload> {
       approvalBase: approvalBaseResult.count ?? 0
     }),
     scheduledPosts: scheduledRows.map((row) =>
-      mapPost(row, publishChannelsByPost[row.id] ?? [])
+      mapPost(
+        row,
+        publishChannelsByPost[row.id] ?? [],
+        originByPost[row.id] ?? { source: "manual", campaignStep: null }
+      )
     ),
     activities: (activityResult.data ?? []).map(mapActivity),
     source: "supabase"
@@ -130,7 +140,8 @@ function mapMetrics({
 
 function mapPost(
   row: PostRow,
-  publishedChannels: PublicationChannel[]
+  publishedChannels: PublicationChannel[],
+  origin: PostOrigin
 ): ScheduledPost {
   return {
     id: row.id,
@@ -138,7 +149,9 @@ function mapPost(
     format: row.format,
     status: row.status,
     scheduledFor: row.scheduled_for ?? row.published_at ?? new Date().toISOString(),
-    publishedChannels
+    publishedChannels,
+    source: origin.source,
+    campaignStep: origin.campaignStep
   };
 }
 
@@ -188,6 +201,45 @@ async function getPublishedChannelsByPost(postIds: string[]) {
   return map;
 }
 
+async function getPostOrigins(postIds: string[]) {
+  if (!postIds.length) {
+    return {} as Record<string, PostOrigin>;
+  }
+
+  const supabase = getSupabaseClient();
+  const result = await supabase
+    .from("post_activities")
+    .select("post_id, message")
+    .in("post_id", postIds);
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
+
+  const map: Record<string, PostOrigin> = {};
+
+  for (const row of result.data as Array<{ post_id: string; message: string }>) {
+    const message = row.message.toLowerCase();
+    const campaignMatch = message.match(/etapa\s+(\d+)/i);
+
+    if (message.includes("super agente")) {
+      const current = map[row.post_id] ?? {
+        source: "super-agent" as const,
+        campaignStep: null
+      };
+
+      map[row.post_id] = {
+        source: "super-agent",
+        campaignStep: campaignMatch
+          ? Number.parseInt(campaignMatch[1], 10)
+          : current.campaignStep
+      };
+    }
+  }
+
+  return map;
+}
+
 function parsePublishedChannel(message: string): PublicationChannel | null {
   if (message.startsWith("Published on linkedin:")) {
     return "linkedin";
@@ -199,3 +251,4 @@ function parsePublishedChannel(message: string): PublicationChannel | null {
 
   return null;
 }
+

@@ -1,4 +1,4 @@
-export type DashboardStats = {
+﻿export type DashboardStats = {
   pendingApproval: number;
   scheduled: number;
   published: number;
@@ -22,6 +22,8 @@ export type ScheduledPost = {
   scheduledFor: string;
   status: PostStatus;
   publishedChannels: PublicationChannel[];
+  source?: "manual" | "super-agent";
+  campaignStep?: number | null;
 };
 
 export type ActivityItem = {
@@ -45,3 +47,4 @@ export type NavGroup = {
     href: string;
   }>;
 };
+
