@@ -4,6 +4,17 @@ import path from "node:path";
 import sharp from "sharp";
 import satori from "satori";
 
+import {
+  buildCreativeEngine,
+  type Composition,
+  type CreativeEngine
+} from "@/lib/creative-engine";
+import { ELEMENTS } from "@/lib/creative-elements";
+import {
+  applyViralLayer,
+  enhanceForViral,
+  transformHook
+} from "@/lib/viral-engine";
 import { ErizonContentOutput } from "@/types/content";
 
 type CanvasSpec = {
@@ -30,7 +41,7 @@ const FONT_GOOGLE_CSS_URL =
 const CARD_TEMPLATES: CardTemplate[] = [
   { bg: "linear-gradient(155deg,#0B0112 0%,#1C0035 100%)", accent: "#BC13FE", text: "#FFFFFF", tagBg: "rgba(188,19,254,0.18)", tagColor: "#BC13FE", tagBorder: "1px solid rgba(188,19,254,0.5)" },
   { bg: "linear-gradient(155deg,#001A22 0%,#003D55 100%)", accent: "#00F2FF", text: "#FFFFFF", tagBg: "rgba(0,242,255,0.14)", tagColor: "#00F2FF", tagBorder: "1px solid rgba(0,242,255,0.4)" },
-  { bg: "linear-gradient(155deg,#120010 0%,#280028 100%)", accent: "#FF00E5", text: "#FFFFFF", tagBg: "rgba(255,0,229,0.14)", tagColor: "#FF00E5", tagBorder: "1px solid rgba(255,0,229,0.4)" },
+  { bg: "linear-gradient(155deg,#120010 0%,#280028 100%)", accent: "#FF00E5", text: "#FFFFFF", tagBg: "rgba(255,0,229,0.14)", tagColor: "#FF00E5", tagBorder: "1px solid rgba(255,0,229,0.4)" }
 ];
 
 const PILLAR_LABELS: Record<string, string> = {
@@ -49,7 +60,7 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
 
   try {
     const font = await loadFont();
-    const svg = await satori(buildCardTree(content, canvas, template, templateIndex) as any, {
+    const svg = await satori(buildCardTree(content, canvas, template) as any, {
       width: canvas.width,
       height: canvas.height,
       fonts: [{ name: "Inter", data: font, weight: 800, style: "normal" }]
@@ -161,28 +172,16 @@ async function cacheFontInSupabase(font: ArrayBuffer) {
 function buildCardTree(
   content: ErizonContentOutput,
   canvas: CanvasSpec,
-  template: CardTemplate,
-  templateIndex: number
+  template: CardTemplate
 ) {
-  const title = wrapWords(content.gancho, getHookMaxChars(canvas, content), getHookMaxLines(canvas, content));
-  const sub = extractSubLines(content.ideia_central, getSubMaxChars(canvas), 2);
-  const footer = truncate(content.cta, canvas.kind === "landscape" ? 72 : 92);
+  let engine = buildCreativeEngine(content);
+  engine = applyViralLayer(content, engine);
+  engine = enhanceForViral(engine, content);
+  const title = wrapWords(content.gancho, 24, 4);
+  const sub = extractSubLines(content.ideia_central, 32, 2);
+  const footer = truncate(content.cta, 80);
   const pillarLabel = PILLAR_LABELS[content.pilar] || content.pilar.toUpperCase();
-  const padding = getPadding(canvas);
-  const layout = pickLayout(content, templateIndex);
-  const titleSize = getTitleSize(canvas, title.length, layout);
-  const bodySize = canvas.kind === "story" ? 28 : canvas.kind === "landscape" ? 22 : 26;
-
-  const children =
-    layout === "stats"
-      ? buildStatsLayout(content, title, pillarLabel, template, canvas)
-      : layout === "checklist"
-        ? buildChecklistLayout(content, title, pillarLabel, template, canvas)
-        : layout === "left"
-          ? buildLeftLayout(title, sub, pillarLabel, footer, template, canvas, titleSize, bodySize)
-          : layout === "center"
-            ? buildCenterLayout(title, sub, pillarLabel, footer, template, canvas, titleSize, bodySize)
-            : buildHeroLayout(title, sub, pillarLabel, footer, template, canvas, titleSize, bodySize);
+  const visualElements = engine.elements.map((element) => ELEMENTS[element](template.accent));
 
   return {
     type: "div",
@@ -190,322 +189,437 @@ function buildCardTree(
       style: {
         width: `${canvas.width}px`,
         height: `${canvas.height}px`,
-        display: "flex",
-        flexDirection: "column",
-        background: template.bg,
-        padding: `${padding}px`,
-        fontFamily: "Inter",
         position: "relative",
-        overflow: "hidden"
+        fontFamily: "Inter",
+        overflow: "hidden",
+        background: template.bg
       },
       children: [
-        // Grid futurista
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              inset: "0",
-              display: "flex",
-              backgroundImage:
-                "linear-gradient(rgba(255,255,255,0.055) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.055) 1px, transparent 1px)",
-              backgroundSize: `${canvas.kind === "story" ? 72 : 56}px ${canvas.kind === "story" ? 72 : 56}px`,
-              opacity: 0.85
-            }
-          }
-        },
-        // Glow externo superior direito
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              top: canvas.kind === "story" ? "-180px" : "-120px",
-              right: canvas.kind === "landscape" ? "-130px" : "-90px",
-              width: canvas.kind === "story" ? "520px" : "380px",
-              height: canvas.kind === "story" ? "520px" : "380px",
-              borderRadius: "999px",
-              background: withAlpha(template.accent, 0.10),
-              display: "flex"
-            }
-          }
-        },
-        // Circulo neon principal superior direito
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              top: canvas.kind === "story" ? "-110px" : "-65px",
-              right: canvas.kind === "landscape" ? "-70px" : "-35px",
-              width: canvas.kind === "story" ? "320px" : "260px",
-              height: canvas.kind === "story" ? "320px" : "260px",
-              borderRadius: "999px",
-              background: withAlpha(template.accent, 0.40),
-              display: "flex"
-            }
-          }
-        },
-        // Anel externo (borda neon)
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              top: canvas.kind === "story" ? "-130px" : "-80px",
-              right: canvas.kind === "landscape" ? "-85px" : "-50px",
-              width: canvas.kind === "story" ? "360px" : "300px",
-              height: canvas.kind === "story" ? "360px" : "300px",
-              borderRadius: "999px",
-              border: `2px solid ${withAlpha(template.accent, 0.30)}`,
-              display: "flex"
-            }
-          }
-        },
-        // Circulo inferior esquerdo
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              left: canvas.kind === "landscape" ? "60%" : "-80px",
-              bottom: canvas.kind === "story" ? "-130px" : "-100px",
-              width: canvas.kind === "story" ? "380px" : "290px",
-              height: canvas.kind === "story" ? "380px" : "290px",
-              borderRadius: "999px",
-              background: withAlpha(template.accent, 0.16),
-              display: "flex"
-            }
-          }
-        },
-        // Linha horizontal scan-line futurista
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              top: canvas.kind === "story" ? "38%" : "36%",
-              left: "0",
-              right: "0",
-              height: "1px",
-              background: `linear-gradient(90deg, transparent, ${withAlpha(template.accent, 0.25)}, transparent)`,
-              display: "flex"
-            }
-          }
-        },
-        // Bracket canto superior esquerdo
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              top: `${padding - 10}px`,
-              left: `${padding - 10}px`,
-              width: "32px",
-              height: "32px",
-              borderTop: `2px solid ${withAlpha(template.accent, 0.55)}`,
-              borderLeft: `2px solid ${withAlpha(template.accent, 0.55)}`,
-              display: "flex"
-            }
-          }
-        },
-        // Bracket canto inferior direito
-        {
-          type: "div",
-          props: {
-            style: {
-              position: "absolute",
-              bottom: `${padding - 10}px`,
-              right: `${padding - 10}px`,
-              width: "32px",
-              height: "32px",
-              borderBottom: `2px solid ${withAlpha(template.accent, 0.55)}`,
-              borderRight: `2px solid ${withAlpha(template.accent, 0.55)}`,
-              display: "flex"
-            }
-          }
-        },
-        ...children
+        renderBackground(engine.mode, template),
+        ...visualElements,
+        ...renderLayout(content, engine, template, canvas, title, sub, footer, pillarLabel)
       ]
     }
   };
 }
 
-function buildHeroLayout(title: string[], sub: string[], pillarLabel: string, footer: string, template: CardTemplate, canvas: CanvasSpec, titleSize: number, bodySize: number) {
-  return [
-    edgeBars(template, canvas),
-    { type: "div", props: { style: { display: "flex", alignItems: "center", marginBottom: canvas.kind === "story" ? 54 : 40 }, children: [badge(pillarLabel, template, canvas)] } },
-    {
+function renderBackground(mode: CreativeEngine["mode"], template: CardTemplate) {
+  if (mode === "editorial") {
+    return {
       type: "div",
       props: {
-        style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "10px" },
-        children: [
-          ...title.map((line) => textLine(line, template.text, titleSize)),
-          ...(sub.length ? [accentRule(template.accent, canvas), ...sub.map((line) => textLine(line, "rgba(255,255,255,0.64)", bodySize))] : [])
-        ]
+        style: {
+          position: "absolute",
+          inset: "0",
+          background: "#0A0A0A"
+        }
       }
-    },
-    footerRow(template, footer, canvas)
-  ];
+    };
+  }
+
+  if (mode === "brutalist") {
+    return {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          inset: "0",
+          background: "#000000"
+        }
+      }
+    };
+  }
+
+  return {
+    type: "div",
+    props: {
+      style: {
+        position: "absolute",
+        inset: "0",
+        background: template.bg
+      }
+    }
+  };
 }
 
-function buildLeftLayout(title: string[], sub: string[], pillarLabel: string, footer: string, template: CardTemplate, canvas: CanvasSpec, titleSize: number, bodySize: number) {
-  return [
-    { type: "div", props: { style: { position: "absolute", left: "0", top: "0", bottom: "0", width: canvas.kind === "story" ? "16px" : "12px", background: template.accent, display: "flex" } } },
-    {
-      type: "div",
-      props: {
-        style: { display: "flex", alignItems: "center", gap: "14px", marginBottom: canvas.kind === "story" ? 46 : 36 },
-        children: [
-          { type: "div", props: { style: { width: "3px", height: "26px", background: template.accent, display: "flex" } } },
-          { type: "div", props: { style: { color: template.tagColor, fontSize: `${canvas.kind === "story" ? 20 : 17}px`, fontWeight: "700", letterSpacing: "4px" }, children: pillarLabel } }
-        ]
-      }
-    },
-    {
-      type: "div",
-      props: {
-        style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "10px" },
-        children: [
-          ...title.map((line, index) => textLine(line, index === 0 ? template.text : "rgba(255,255,255,0.88)", index === 0 ? titleSize + 2 : titleSize - 8)),
-          ...(sub.length ? [accentRule(template.accent, canvas), ...sub.map((line) => textLine(line, "rgba(255,255,255,0.62)", bodySize - 2))] : [])
-        ]
-      }
-    },
-    { type: "div", props: { style: { height: "2px", background: `linear-gradient(90deg,${template.accent},transparent)`, marginBottom: "22px", display: "flex" } } },
-    footerRow(template, footer, canvas)
-  ];
+function renderLayout(
+  content: ErizonContentOutput,
+  engine: CreativeEngine,
+  template: CardTemplate,
+  canvas: CanvasSpec,
+  title: string[],
+  sub: string[],
+  footer: string,
+  pillarLabel: string
+) {
+  if (engine.viralBoost >= 2) {
+    return layoutViral(content, engine, template, canvas, footer, pillarLabel);
+  }
+
+  if (engine.layout === "editorial-stack" || engine.layout === "split-clean") {
+    return layoutEditorial(content, engine, template, canvas, title, sub, footer, pillarLabel);
+  }
+
+  if (engine.layout === "number") {
+    return layoutNumber(content, engine, template, canvas, title, sub, footer, pillarLabel);
+  }
+
+  return layoutPoster(content, engine, template, canvas, title, sub, footer, pillarLabel);
 }
 
-function buildCenterLayout(title: string[], sub: string[], pillarLabel: string, footer: string, template: CardTemplate, canvas: CanvasSpec, titleSize: number, bodySize: number) {
-  const centeredTitle = title.length > 2 ? titleSize - 8 : titleSize;
+function layoutViral(
+  content: ErizonContentOutput,
+  engine: CreativeEngine,
+  template: CardTemplate,
+  canvas: CanvasSpec,
+  footer: string,
+  pillarLabel: string
+) {
+  const lines = transformHook(content);
+
   return [
-    cornerBox(template.accent, 40, 40, 40, 3, 0.12),
-    cornerBox(template.accent, 80, 50, 90, 4, 0.24, true),
-    cornerBox(template.accent, 60, 50, 70, 4, 0.18, false, true),
+    pillarTag(pillarLabel, template, canvas),
     {
       type: "div",
       props: {
-        style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "14px" },
-        children: [
-          pillBadge(pillarLabel, template, canvas),
-          ...title.map((line) => centeredTextLine(line, template.text, centeredTitle)),
-          ...(sub.length ? [accentRule(template.accent, canvas), ...sub.map((line) => centeredTextLine(line, "rgba(255,255,255,0.62)", bodySize - 2))] : [])
-        ]
-      }
-    },
-    centeredFooter(template, footer, canvas)
-  ];
-}
-
-function buildStatsLayout(content: ErizonContentOutput, title: string[], pillarLabel: string, template: CardTemplate, canvas: CanvasSpec) {
-  const stats = [
-    { value: pillarLabel.slice(0, 8), label: "PILAR" },
-    { value: formatLabel(content.formato).slice(0, 10).toUpperCase(), label: "FORMATO" },
-    { value: (content.sugestao_horario || "18:00").slice(0, 5), label: "HORARIO" }
-  ];
-
-  return [
-    edgeBars(template, canvas),
-    { type: "div", props: { style: { display: "flex", alignItems: "center", marginBottom: "32px" }, children: [badge(pillarLabel, template, canvas)] } },
-    { type: "div", props: { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "32px" }, children: title.map((line) => textLine(line, template.text, canvas.kind === "landscape" ? 50 : 62)) } },
-    { type: "div", props: { style: { height: "2px", background: `linear-gradient(90deg,${template.accent},transparent)`, marginBottom: "28px", display: "flex" } } },
-    {
-      type: "div",
-      props: {
-        style: { display: "flex", flex: 1, gap: "18px", alignItems: "stretch" },
-        children: stats.map((stat) => ({
+        style: {
+          position: "absolute",
+          top: canvas.kind === "story" ? "28%" : "30%",
+          left: "8%",
+          width: "84%",
+          transform: engine.patternBreak ? "rotate(-2deg)" : "none",
+          zIndex: 2
+        },
+        children: lines.map((line) => ({
           type: "div",
           props: {
             style: {
-              flex: 1,
-              background: template.tagBg,
-              border: template.tagBorder,
-              borderRadius: "12px",
-              padding: "18px 12px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px"
+              fontSize: `${engine.typography.size + 20}px`,
+              fontWeight: 900,
+              color: "#FFFFFF",
+              marginBottom: "10px",
+              lineHeight: engine.exaggeration ? "0.94" : "1.02",
+              letterSpacing: engine.exaggeration ? "-2px" : "-1px"
             },
-            children: [
-              centeredTextLine(stat.value, template.accent, canvas.kind === "landscape" ? 44 : 58),
-              centeredTextLine(stat.label, "rgba(255,255,255,0.55)", 18)
-            ]
+            children: line
           }
         }))
       }
     },
-    footerRow(template, truncate(content.cta, 60), canvas)
+    footerRow(template, canvas, footer)
   ];
 }
 
-function buildChecklistLayout(content: ErizonContentOutput, title: string[], pillarLabel: string, template: CardTemplate, canvas: CanvasSpec) {
-  const items = extractChecklistItems(content.ideia_central);
+function layoutPoster(
+  content: ErizonContentOutput,
+  engine: CreativeEngine,
+  template: CardTemplate,
+  canvas: CanvasSpec,
+  title: string[],
+  sub: string[],
+  footer: string,
+  pillarLabel: string
+) {
+  const titleTop = canvas.kind === "story" ? "20%" : "22%";
+  const titleLeft = engine.composition === "left" ? "9%" : "10%";
 
   return [
-    { type: "div", props: { style: { position: "absolute", left: "0", top: "0", bottom: "0", width: canvas.kind === "story" ? "16px" : "10px", background: `linear-gradient(180deg,${template.accent},transparent,${template.accent})`, display: "flex" } } },
+    pillarTag(pillarLabel, template, canvas),
     {
       type: "div",
       props: {
-        style: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "30px" },
+        style: composeStyle(
+          {
+            position: "absolute",
+            top: titleTop,
+            left: titleLeft,
+            width: engine.layout === "asymmetric" ? "72%" : "80%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            zIndex: 2
+          },
+          engine.composition
+        ),
+        children: title.map((line) => ({
+          type: "div",
+          props: {
+            style: {
+              fontSize: `${resolveTitleSize(engine, canvas)}px`,
+              fontWeight: `${engine.typography.weight}`,
+              color: "#FFFFFF",
+              lineHeight: engine.mode === "brutalist" ? "0.96" : "1.08",
+              letterSpacing: engine.mode === "editorial" ? "1px" : "-1px"
+            },
+            children: engine.layout === "poster" ? line.toUpperCase() : line
+          }
+        }))
+      }
+    },
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: canvas.kind === "story" ? "68%" : "72%",
+          left: engine.layout === "asymmetric" ? "48%" : "10%",
+          width: engine.layout === "asymmetric" ? "38%" : "44%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          opacity: 0.78,
+          zIndex: 2
+        },
+        children: sub.map((line) => ({
+          type: "div",
+          props: {
+            style: {
+              fontSize: `${canvas.kind === "story" ? 26 : 22}px`,
+              color: "#D1D1D1",
+              fontWeight: "600",
+              lineHeight: "1.32"
+            },
+            children: line
+          }
+        }))
+      }
+    },
+    footerRow(template, canvas, footer)
+  ];
+}
+
+function layoutEditorial(
+  content: ErizonContentOutput,
+  engine: CreativeEngine,
+  template: CardTemplate,
+  canvas: CanvasSpec,
+  title: string[],
+  sub: string[],
+  footer: string,
+  pillarLabel: string
+) {
+  return [
+    pillarTag(pillarLabel, template, canvas),
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: canvas.kind === "story" ? "25%" : "24%",
+          left: "10%",
+          width: engine.layout === "split-clean" ? "46%" : "60%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+          zIndex: 2
+        },
         children: [
-          { type: "div", props: { style: { width: "3px", height: "22px", background: template.accent, display: "flex" } } },
-          { type: "div", props: { style: { color: template.tagColor, fontSize: "16px", fontWeight: "700", letterSpacing: "4px" }, children: pillarLabel } }
+          {
+            type: "div",
+            props: {
+              style: {
+                fontSize: "20px",
+                letterSpacing: "4px",
+                color: template.accent,
+                fontWeight: "700"
+              },
+              children: content.pilar.toUpperCase()
+            }
+          },
+          ...title.map((line) => ({
+            type: "div",
+            props: {
+              style: {
+                fontSize: `${resolveTitleSize(engine, canvas)}px`,
+                color: "#FFFFFF",
+                fontWeight: `${engine.typography.weight}`,
+                lineHeight: "1.15"
+              },
+              children: line
+            }
+          }))
         ]
       }
     },
-    { type: "div", props: { style: { display: "flex", flexDirection: "column", gap: "8px", marginBottom: "28px" }, children: title.map((line) => textLine(line, template.text, canvas.kind === "landscape" ? 48 : 60)) } },
-    accentRule(template.accent, canvas),
     {
       type: "div",
       props: {
-        style: { flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "18px" },
-        children: items.map((item) => ({
+        style: {
+          position: "absolute",
+          top: canvas.kind === "story" ? "30%" : "28%",
+          right: "10%",
+          width: engine.layout === "split-clean" ? "28%" : "22%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          opacity: 0.78,
+          zIndex: 2
+        },
+        children: sub.map((line) => ({
           type: "div",
           props: {
-            style: { display: "flex", alignItems: "flex-start", gap: "14px" },
-            children: [
-              { type: "div", props: { style: { width: "8px", height: "8px", background: template.accent, borderRadius: "2px", marginTop: "10px", flexShrink: 0, display: "flex" } } },
-              { type: "div", props: { style: { color: "rgba(255,255,255,0.82)", fontSize: `${canvas.kind === "landscape" ? 22 : 26}px`, fontWeight: "800", lineHeight: "1.3" }, children: item } }
-            ]
+            style: {
+              fontSize: `${canvas.kind === "story" ? 24 : 20}px`,
+              color: "#D5D5D5",
+              fontWeight: "600",
+              lineHeight: "1.35"
+            },
+            children: line
           }
         }))
       }
     },
-    footerRow(template, truncate(content.cta, 66), canvas)
+    footerRow(template, canvas, footer)
   ];
 }
 
-function edgeBars(template: CardTemplate, canvas: CanvasSpec) {
-  const h = canvas.kind === "story" ? "14px" : "10px";
+function layoutNumber(
+  content: ErizonContentOutput,
+  engine: CreativeEngine,
+  template: CardTemplate,
+  canvas: CanvasSpec,
+  title: string[],
+  sub: string[],
+  footer: string,
+  pillarLabel: string
+) {
+  const numberToken = extractPrimaryNumber(content);
+
+  return [
+    pillarTag(pillarLabel, template, canvas),
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: canvas.kind === "story" ? "12%" : "10%",
+          right: "8%",
+          fontSize: `${canvas.kind === "story" ? 220 : 180}px`,
+          fontWeight: "900",
+          color: `${template.accent}F2`,
+          lineHeight: "0.9",
+          letterSpacing: "-8px",
+          zIndex: 1
+        },
+        children: numberToken
+      }
+    },
+    {
+      type: "div",
+      props: {
+        style: composeStyle(
+          {
+            position: "absolute",
+            top: canvas.kind === "story" ? "36%" : "34%",
+            left: "10%",
+            width: "72%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            zIndex: 2
+          },
+          engine.composition
+        ),
+        children: title.map((line) => ({
+          type: "div",
+          props: {
+            style: {
+              fontSize: `${Math.max(46, resolveTitleSize(engine, canvas) - 18)}px`,
+              color: "#FFFFFF",
+              fontWeight: "900",
+              lineHeight: "1.04",
+              letterSpacing: "-1px"
+            },
+            children: line
+          }
+        }))
+      }
+    },
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: canvas.kind === "story" ? "72%" : "74%",
+          left: "10%",
+          width: "42%",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          zIndex: 2
+        },
+        children: sub.map((line) => ({
+          type: "div",
+          props: {
+            style: {
+              fontSize: `${canvas.kind === "story" ? 24 : 20}px`,
+              color: "rgba(255,255,255,0.78)",
+              fontWeight: "600"
+            },
+            children: line
+          }
+        }))
+      }
+    },
+    footerRow(template, canvas, footer)
+  ];
+}
+
+function pillarTag(label: string, template: CardTemplate, canvas: CanvasSpec) {
   return {
     type: "div",
     props: {
-      children: [
-        { type: "div", props: { style: { position: "absolute", top: "0", left: "0", right: "0", height: h, background: `linear-gradient(90deg,transparent 0%,${template.accent} 40%,${template.accent} 60%,transparent 100%)`, display: "flex" } } },
-        { type: "div", props: { style: { position: "absolute", top: "0", left: "0", right: "0", height: "2px", background: `linear-gradient(90deg,transparent,${withAlpha(template.accent, 0.5)},transparent)`, display: "flex" } } },
-        { type: "div", props: { style: { position: "absolute", bottom: "0", left: "0", right: "0", height: h, background: `linear-gradient(90deg,${template.accent} 0%,transparent 40%,transparent 60%,${template.accent} 100%)`, display: "flex" } } },
-        { type: "div", props: { style: { position: "absolute", bottom: "0", left: "0", right: "0", height: "2px", background: `linear-gradient(90deg,${withAlpha(template.accent, 0.5)},transparent,${withAlpha(template.accent, 0.5)})`, display: "flex" } } }
-      ]
+      style: {
+        position: "absolute",
+        top: canvas.kind === "story" ? "6%" : "7%",
+        left: "10%",
+        color: template.accent,
+        fontSize: canvas.kind === "story" ? "16px" : "14px",
+        letterSpacing: "4px",
+        fontWeight: "700",
+        zIndex: 2
+      },
+      children: label
     }
   };
 }
 
-function badge(label: string, template: CardTemplate, canvas: CanvasSpec) {
-  const fs = canvas.kind === "story" ? 22 : 18;
-  const pad = canvas.kind === "story" ? "9px 24px" : "7px 20px";
+function footerRow(template: CardTemplate, canvas: CanvasSpec, footer: string) {
   return {
     type: "div",
     props: {
-      style: { display: "flex", flexDirection: "column" },
+      style: {
+        position: "absolute",
+        left: "10%",
+        right: "10%",
+        bottom: canvas.kind === "story" ? "5%" : "6%",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        zIndex: 2
+      },
       children: [
         {
           type: "div",
           props: {
-            style: { background: template.tagBg, border: `1px solid ${withAlpha(template.accent, 0.65)}`, borderRadius: "6px", padding: pad, color: template.tagColor, fontSize: `${fs}px`, fontWeight: "700", letterSpacing: "3.5px", display: "flex" },
-            children: label
+            style: {
+              fontSize: canvas.kind === "story" ? "16px" : "14px",
+              opacity: 0.34,
+              letterSpacing: "4px",
+              color: "#FFFFFF"
+            },
+            children: "erizon.ai"
+          }
+        },
+        {
+          type: "div",
+          props: {
+            style: {
+              fontSize: canvas.kind === "story" ? "20px" : "18px",
+              color: template.accent,
+              fontWeight: "700"
+            },
+            children: footer
           }
         }
       ]
@@ -513,50 +627,26 @@ function badge(label: string, template: CardTemplate, canvas: CanvasSpec) {
   };
 }
 
-function pillBadge(label: string, template: CardTemplate, canvas: CanvasSpec) {
-  const fs = canvas.kind === "story" ? 20 : 18;
-  const pad = canvas.kind === "story" ? "11px 28px" : "9px 26px";
-  return {
-    type: "div",
-    props: {
-      style: { background: template.tagBg, border: `1px solid ${withAlpha(template.accent, 0.65)}`, borderRadius: "999px", padding: pad, color: template.tagColor, fontSize: `${fs}px`, fontWeight: "700", letterSpacing: "4px", display: "flex" },
-      children: label
-    }
-  };
+function composeStyle(style: Record<string, unknown>, composition: Composition) {
+  if (composition === "diagonal") {
+    return { ...style, transform: "rotate(-3deg)" };
+  }
+
+  if (composition === "chaotic") {
+    return { ...style, transform: "translate(18px,-12px)" };
+  }
+
+  if (composition === "right") {
+    return { ...style, left: "auto", right: style.left ?? "10%" };
+  }
+
+  return style;
 }
 
-function accentRule(accent: string, canvas: CanvasSpec) {
-  const w = canvas.kind === "story" ? 100 : 72;
-  return {
-    type: "div",
-    props: {
-      style: { display: "flex", flexDirection: "column", gap: "4px", marginTop: "20px", marginBottom: "18px" },
-      children: [
-        { type: "div", props: { style: { height: "3px", width: `${w}px`, background: accent, display: "flex" } } },
-        { type: "div", props: { style: { height: "1px", width: `${Math.round(w * 0.55)}px`, background: withAlpha(accent, 0.45), display: "flex" } } }
-      ]
-    }
-  };
-}
-
-function textLine(line: string, color: string, fontSize: number) {
-  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.22", letterSpacing: "-0.5px" }, children: line } };
-}
-
-function centeredTextLine(line: string, color: string, fontSize: number) {
-  return { type: "div", props: { style: { color, fontSize: `${fontSize}px`, fontWeight: "800", lineHeight: "1.22", letterSpacing: "-0.5px", textAlign: "center", justifyContent: "center", display: "flex" }, children: line } };
-}
-
-function footerRow(template: CardTemplate, footer: string, canvas: CanvasSpec) {
-  return { type: "div", props: { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: canvas.kind === "story" ? "34px" : "24px" }, children: [{ type: "div", props: { style: { color: "rgba(255,255,255,0.3)", fontSize: `${canvas.kind === "story" ? 20 : 18}px`, letterSpacing: "5px" }, children: "erizon.ai" } }, { type: "div", props: { style: { color: template.accent, fontSize: `${canvas.kind === "story" ? 22 : 20}px`, fontWeight: "700", letterSpacing: "3px" }, children: footer } }] } };
-}
-
-function centeredFooter(template: CardTemplate, footer: string, canvas: CanvasSpec) {
-  return { type: "div", props: { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: "16px" }, children: [{ type: "div", props: { style: { height: "2px", width: "48px", background: template.accent, display: "flex" } } }, { type: "div", props: { style: { color: "rgba(255,255,255,0.4)", fontSize: `${canvas.kind === "story" ? 22 : 20}px`, letterSpacing: "5px" }, children: footer } }, { type: "div", props: { style: { height: "2px", width: "48px", background: template.accent, display: "flex" } } }] } };
-}
-
-function cornerBox(accent: string, size: number, top?: number, offset?: number, borderWidth = 4, opacity = 0.2, right = false, bottom = false) {
-  return { type: "div", props: { style: { position: "absolute", width: `${size}px`, height: `${size}px`, border: `${borderWidth}px solid ${accent}`, borderRadius: "8px", opacity, display: "flex", ...(right ? { right: `${offset ?? 50}px` } : { left: `${offset ?? 50}px` }), ...(bottom ? { bottom: `${top ?? 50}px` } : { top: `${top ?? 50}px` }) } } };
+function resolveTitleSize(engine: CreativeEngine, canvas: CanvasSpec) {
+  const base = canvas.kind === "story" ? engine.typography.size : Math.max(56, engine.typography.size - 8);
+  if (engine.layout === "number") return Math.max(46, base - 14);
+  return base;
 }
 
 function buildFallbackSvg(content: ErizonContentOutput, canvas: CanvasSpec, template: CardTemplate) {
@@ -588,10 +678,10 @@ function chooseTemplateIndex(content: ErizonContentOutput) {
   return seed.split("").reduce((sum, char) => (sum * 31 + char.charCodeAt(0)) % CARD_TEMPLATES.length, 0);
 }
 
-function pickLayout(content: ErizonContentOutput, templateIndex: number) {
-  if (["analise", "insight_estrategico"].includes(content.formato)) return "stats";
-  if (["checklist", "comparacao", "mini_aula"].includes(content.formato)) return "checklist";
-  return ["hero", "left", "center"][templateIndex % 3] as "hero" | "left" | "center";
+function extractPrimaryNumber(content: ErizonContentOutput) {
+  const source = `${content.gancho} ${content.angulo} ${content.ideia_central} ${content.prompt_imagem}`;
+  const match = source.match(/(\d+[.,]?\d*\s?%|\d+[.,]?\d*\s?x|\d+[.,]?\d*)/i);
+  return match?.[1]?.replace(/\s+/g, "") ?? "3X";
 }
 
 function selectCanvasSpec(content: ErizonContentOutput): CanvasSpec {
@@ -620,7 +710,9 @@ function getPadding(canvas: CanvasSpec) {
 }
 
 function getHookMaxChars(canvas: CanvasSpec, content: ErizonContentOutput) {
-  if (content.formato === "analise" || content.formato === "insight_estrategico") return canvas.kind === "landscape" ? 22 : 26;
+  if (content.formato === "analise" || content.formato === "insight_estrategico") {
+    return canvas.kind === "landscape" ? 22 : 26;
+  }
   if (canvas.kind === "story") return 22;
   if (canvas.kind === "portrait") return 26;
   if (canvas.kind === "landscape") return 28;
@@ -668,21 +760,8 @@ function extractSubLines(text: string, maxChars: number, maxLines: number) {
   return wrapWords(firstSentence.trim(), maxChars, maxLines);
 }
 
-function extractChecklistItems(text: string) {
-  const clean = stripHtml(text);
-  const sentencePieces = clean.split(/[.!?]\s+/).map((piece) => piece.trim()).filter(Boolean);
-  const items = sentencePieces.slice(0, 3).map((item) => truncate(item, 72));
-  if (items.length >= 2) return items;
-  const words = clean.split(/\s+/).filter(Boolean);
-  return [truncate(words.slice(0, 8).join(" "), 72), truncate(words.slice(8, 18).join(" "), 72), truncate(words.slice(18, 30).join(" "), 72)].filter((item) => item.length > 6);
-}
-
 function stripHtml(value: string) {
   return value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
-}
-
-function formatLabel(format: ErizonContentOutput["formato"]) {
-  return format.replaceAll("_", " ");
 }
 
 function truncate(value: string, maxLength: number) {
