@@ -1,4 +1,6 @@
 import { erizonBrand } from "@/lib/erizon-brand";
+import { deserializeContentPayload } from "@/lib/content-persistence";
+import { getSupabaseClient, hasSupabaseEnv } from "@/lib/supabase";
 import {
   ContentFormat,
   ContentPillar,
@@ -15,6 +17,14 @@ type GenerateContentParams = {
   pillar?: ContentPillar | "";
   format?: ContentFormat | "";
   channels?: PublicationChannel[];
+};
+
+type CreativeHistory = {
+  lastLayout: string | null;
+  lastApproach: string | null;
+  recentLayouts: string[];
+  recentApproaches: string[];
+  recentVisualElements: string[];
 };
 
 type GroqResponse = {
@@ -37,6 +47,8 @@ export async function generateErizonContent(
     throw new Error("GROQ_API_KEY nao configurada.");
   }
 
+  const creativeHistory = await getCreativeHistory();
+
   const response = await fetch(GROQ_API_URL, {
     method: "POST",
     headers: {
@@ -56,7 +68,7 @@ export async function generateErizonContent(
         },
         {
           role: "user",
-          content: buildUserPrompt(params)
+          content: buildUserPrompt(params, creativeHistory)
         }
       ]
     }),
@@ -92,7 +104,10 @@ function buildSystemPrompt() {
   ].join(" ");
 }
 
-function buildUserPrompt(params: GenerateContentParams) {
+function buildUserPrompt(
+  params: GenerateContentParams,
+  creativeHistory: CreativeHistory
+) {
   const channels = params.channels?.length
     ? params.channels.join(", ")
     : "instagram, linkedin";
@@ -114,12 +129,176 @@ function buildUserPrompt(params: GenerateContentParams) {
     "legenda deve vir pronta para postagem, com quebra de linhas, desenvolvimento forte, CTA final e hashtags estrategicas no final.",
     "Para Instagram, a legenda pode ser mais emocional e com 6 a 10 hashtags. Para LinkedIn, mais densa, mais intelectual e com 3 a 5 hashtags.",
     "prompt_imagem deve instruir um layout premium da Erizon com fundo escuro, grid tecnico, glow neon roxo/magenta/ciano, tipografia principal pesada estilo Montserrat, apoio em sans limpa e microcopy em mono.",
-    "estrutura_criativo deve descrever claramente a composicao visual, hierarquia, callouts, stats e o formato ideal do canvas.",
+    "Torne o agente de imagem mais inteligente e anti-repeticao.",
+    "A cada nova imagem, escolha aleatoriamente 1 layout entre estas opcoes, sem repetir o ultimo usado: 1) texto central grande + fundo minimalista, 2) texto alinhado a esquerda + elemento grafico a direita, 3) texto pequeno + destaque visual forte, 4) layout dividido em 2 blocos 50/50, 5) estilo print de sistema com UI fake/dashboard/app, 6) poster impactante com tipografia gigante, 7) texto rotacionado ou diagonal, 8) composicao caotica com elementos sobrepostos, 9) foco em numero grande, 10) anuncio premium clean com espacamento forte.",
+    "Nunca repetir o mesmo layout 2 vezes seguidas. Sempre variar posicao, tamanho e hierarquia dos elementos.",
+    "Use elementos visuais variados, escolhendo combinacoes diferentes: grids, linhas finas, barras de progresso, graficos fake, caixas UI, cards, dashboards, sombras fortes, blur, formas geometricas, glitch, efeitos de luz, textura noise ou grain, recortes assimetricos.",
+    "Evite repetir o mesmo tipo de elemento em imagens consecutivas.",
+    "Cada imagem deve assumir exatamente 1 abordagem principal e nunca repetir a abordagem anterior: alerta, curiosidade, autoridade, confronto, story, prova, bastidor, erro comum, dica pratica, quebra de crenca.",
+    "Crie imagens que parem o scroll. Evite qualquer aparencia generica, segura ou de banco de templates.",
+    "Priorize impacto visual, contraste, surpresa, hierarquia clara, elementos inesperados e composicao fora do padrao.",
+    "Se a imagem parecer comum, refaca internamente com uma abordagem mais ousada antes de responder.",
+    "A imagem precisa parecer uma peca de marca premium, nao um post comum.",
+    "estrutura_criativo deve descrever claramente a composicao visual, hierarquia, callouts, stats, o formato ideal do canvas, o layout escolhido, a abordagem escolhida e os principais elementos visuais usados.",
+    creativeHistory.lastLayout
+      ? `O ultimo layout usado foi: ${creativeHistory.lastLayout}. Nao repita esse layout.`
+      : "",
+    creativeHistory.lastApproach
+      ? `A ultima abordagem usada foi: ${creativeHistory.lastApproach}. Nao repita essa abordagem.`
+      : "",
+    creativeHistory.recentLayouts.length
+      ? `Analise os ultimos 5 layouts usados e crie algo visualmente diferente de todos eles: ${creativeHistory.recentLayouts.join(" | ")}.`
+      : "",
+    creativeHistory.recentApproaches.length
+      ? `Historico recente de abordagens: ${creativeHistory.recentApproaches.join(" | ")}. Gere uma abordagem nitidamente diferente da ultima e, se possivel, distante das demais.`
+      : "",
+    creativeHistory.recentVisualElements.length
+      ? `Elementos visuais recentemente usados: ${creativeHistory.recentVisualElements.join(", ")}. Evite repetir a mesma combinacao dominante agora.`
+      : "",
     "A ideia central deve falar de dinheiro, decisao, risco, escala, lucro ou perda evitada.",
-    "Se nao houver pilar ou formato obrigatorio, escolha a melhor opcao para performance e consistencia de marca."
+    "Se nao houver pilar ou formato obrigatorio, escolha a melhor opcao para performance e consistencia de marca.",
+    "No campo prompt_imagem, escreva instrucoes acionaveis, especificas e visuais, como se estivesse dirigindo um diretor de arte senior.",
+    "No campo estrutura_criativo, deixe explicito em uma frase curta o layout selecionado, a abordagem selecionada e por que essa combinacao difere do historico recente."
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+async function getCreativeHistory(): Promise<CreativeHistory> {
+  if (!hasSupabaseEnv()) {
+    return {
+      lastLayout: null,
+      lastApproach: null,
+      recentLayouts: [],
+      recentApproaches: [],
+      recentVisualElements: []
+    };
+  }
+
+  try {
+    const supabase = getSupabaseClient();
+    const result = await supabase
+      .from("posts")
+      .select("caption, created_at")
+      .not("caption", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    const entries = (result.data ?? [])
+      .map((row) => deserializeContentPayload(row.caption))
+      .filter((item): item is ErizonContentOutput => Boolean(item));
+
+    const recentLayouts = entries
+      .map((item) => extractCreativeField(item.estrutura_criativo, item.prompt_imagem, LAYOUT_KEYWORDS))
+      .filter((item): item is string => Boolean(item));
+    const recentApproaches = entries
+      .map((item) => extractCreativeField(item.estrutura_criativo, item.prompt_imagem, APPROACH_KEYWORDS))
+      .filter((item): item is string => Boolean(item));
+    const recentVisualElements = Array.from(
+      new Set(
+        entries.flatMap((item) =>
+          extractVisualElements(`${item.estrutura_criativo} ${item.prompt_imagem}`)
+        )
+      )
+    ).slice(0, 12);
+
+    return {
+      lastLayout: recentLayouts[0] ?? null,
+      lastApproach: recentApproaches[0] ?? null,
+      recentLayouts: recentLayouts.slice(0, 5),
+      recentApproaches: recentApproaches.slice(0, 5),
+      recentVisualElements
+    };
+  } catch {
+    return {
+      lastLayout: null,
+      lastApproach: null,
+      recentLayouts: [],
+      recentApproaches: [],
+      recentVisualElements: []
+    };
+  }
+}
+
+const LAYOUT_KEYWORDS = [
+  "texto central grande + fundo minimalista",
+  "texto alinhado a esquerda + elemento grafico a direita",
+  "texto pequeno + destaque visual forte",
+  "layout dividido em 2 blocos",
+  "print de sistema",
+  "poster impactante",
+  "texto rotacionado",
+  "texto diagonal",
+  "composicao caotica",
+  "foco em numero grande",
+  "anuncio premium"
+] as const;
+
+const APPROACH_KEYWORDS = [
+  "alerta",
+  "curiosidade",
+  "autoridade",
+  "confronto",
+  "story",
+  "prova",
+  "bastidor",
+  "erro comum",
+  "dica pratica",
+  "quebra de crenca"
+] as const;
+
+const VISUAL_ELEMENT_KEYWORDS = [
+  "grid",
+  "grids",
+  "linhas finas",
+  "barra de progresso",
+  "barras de progresso",
+  "grafico fake",
+  "graficos fake",
+  "caixas ui",
+  "cards",
+  "dashboard",
+  "dashboards",
+  "sombras fortes",
+  "blur",
+  "formas geometricas",
+  "quadrado",
+  "linha",
+  "glitch",
+  "efeitos de luz",
+  "noise",
+  "grain",
+  "recortes assimetricos"
+] as const;
+
+function extractCreativeField(
+  structure: string,
+  prompt: string,
+  candidates: readonly string[]
+) {
+  const base = `${structure} ${prompt}`.toLowerCase();
+
+  for (const candidate of candidates) {
+    if (base.includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  const explicitMatch = structure.match(
+    /(layout|abordagem)\s*[:=-]\s*([^.;|\n]+)/i
+  );
+
+  return explicitMatch?.[2]?.trim() ?? null;
+}
+
+function extractVisualElements(text: string) {
+  const base = text.toLowerCase();
+
+  return VISUAL_ELEMENT_KEYWORDS.filter((candidate) => base.includes(candidate));
 }
 
 function validateErizonContent(value: unknown): ErizonContentOutput {
