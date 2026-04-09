@@ -1,12 +1,15 @@
 import { uploadGeneratedAsset } from "@/lib/asset-upload";
 import { serializeContentPayload } from "@/lib/content-persistence";
-import { generateErizonAsset } from "@/lib/branded-image";
+import { buildCreativeMeta, generateErizonAsset } from "@/lib/branded-image";
 import { getSupabaseClient } from "@/lib/supabase";
 import { ContentFormat, ErizonContentOutput } from "@/types/content";
 
 export async function persistGeneratedContent(content: ErizonContentOutput) {
   const supabase = getSupabaseClient();
-  let enrichedContent = content;
+  let enrichedContent = {
+    ...content,
+    creative_meta: content.creative_meta ?? buildCreativeMeta(content)
+  };
 
   if (!enrichedContent.asset_url_publicacao) {
     try {

@@ -1,9 +1,15 @@
+type ElementContext = {
+  accent: string;
+  primaryNumber?: string | null;
+};
+
 export const ELEMENTS = {
-  block: (accent: string) => ({
+  block: ({ accent }: ElementContext) => ({
     type: "div",
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         width: "60%",
         height: "40%",
         background: accent,
@@ -14,11 +20,12 @@ export const ELEMENTS = {
     }
   }),
 
-  diagonalLine: (accent: string) => ({
+  diagonalLine: ({ accent }: ElementContext) => ({
     type: "div",
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         width: "200%",
         height: "2px",
         background: accent,
@@ -34,6 +41,7 @@ export const ELEMENTS = {
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         inset: 0,
         backgroundImage:
           "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)",
@@ -42,11 +50,12 @@ export const ELEMENTS = {
     }
   }),
 
-  glow: (accent: string) => ({
+  glow: ({ accent }: ElementContext) => ({
     type: "div",
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         width: "300px",
         height: "300px",
         borderRadius: "999px",
@@ -64,6 +73,7 @@ export const ELEMENTS = {
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         inset: 0,
         opacity: 0.08,
         backgroundImage:
@@ -73,7 +83,7 @@ export const ELEMENTS = {
     }
   }),
 
-  lines: (accent: string) => ({
+  lines: ({ accent }: ElementContext) => ({
     type: "div",
     props: {
       children: [
@@ -82,6 +92,7 @@ export const ELEMENTS = {
           props: {
             style: {
               position: "absolute",
+              zIndex: 0,
               top: "12%",
               left: "10%",
               width: "100px",
@@ -95,6 +106,7 @@ export const ELEMENTS = {
           props: {
             style: {
               position: "absolute",
+              zIndex: 0,
               top: "10%",
               right: "8%",
               width: "1px",
@@ -107,11 +119,12 @@ export const ELEMENTS = {
     }
   }),
 
-  minimal: (accent: string) => ({
+  minimal: ({ accent }: ElementContext) => ({
     type: "div",
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         top: "24%",
         right: "8%",
         width: "28%",
@@ -121,11 +134,12 @@ export const ELEMENTS = {
     }
   }),
 
-  bigNumber: (accent: string) => ({
+  bigNumber: ({ accent, primaryNumber }: ElementContext) => ({
     type: "div",
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         fontSize: "220px",
         fontWeight: 900,
         color: accent,
@@ -133,7 +147,7 @@ export const ELEMENTS = {
         top: "10%",
         left: "5%"
       },
-      children: "90%"
+      children: primaryNumber || "90%"
     }
   }),
 
@@ -142,6 +156,7 @@ export const ELEMENTS = {
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         width: "200%",
         height: "40px",
         background:
@@ -152,11 +167,12 @@ export const ELEMENTS = {
     }
   }),
 
-  glitchBar: (accent: string) => ({
+  glitchBar: ({ accent }: ElementContext) => ({
     type: "div",
     props: {
       style: {
         position: "absolute",
+        zIndex: 0,
         height: "6px",
         width: "100%",
         background: accent,

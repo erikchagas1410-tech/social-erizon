@@ -20,6 +20,17 @@ export type ContentFormat =
 
 export type PublicationChannel = "linkedin" | "instagram";
 
+export type CreativeMeta = {
+  mode: string;
+  layout: string;
+  composition: string;
+  elements: string[];
+  viralBoost: number;
+  exaggeration: boolean;
+  patternBreak: boolean;
+  primaryNumber?: string | null;
+};
+
 export type ErizonContentOutput = {
   titulo_interno: string;
   objetivo: string;
@@ -40,4 +51,5 @@ export type ErizonContentOutput = {
   hipotese_performance: string;
   asset_url_publicacao?: string | null;
   canais_publicacao?: PublicationChannel[];
+  creative_meta?: CreativeMeta;
 };

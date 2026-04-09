@@ -7,6 +7,7 @@ export type Layout =
   | "asymmetric"
   | "editorial-stack"
   | "split-clean"
+  | "viral-dashboard"
   | "dashboard"
   | "hero";
 export type Composition =
@@ -86,12 +87,16 @@ function pickMode(score: CreativeScore): Mode {
 
 function pickLayout(mode: Mode, content: ErizonContentOutput): Layout {
   const seed = `${content.gancho}|${content.angulo}|${mode}`;
+  const text = `${content.gancho} ${content.angulo} ${content.ideia_central}`.toLowerCase();
 
   if (mode === "brutalist") {
     return pickSeeded(seed, ["poster", "number", "asymmetric"]);
   }
 
   if (mode === "editorial") {
+    if (content.pilar === "autoridade" && (text.includes("dados") || text.includes("analise"))) {
+      return "viral-dashboard";
+    }
     return pickSeeded(seed, ["editorial-stack", "split-clean"]);
   }
 

@@ -32,6 +32,12 @@ type CardTemplate = {
   tagBorder: string;
 };
 
+type SafeZone = {
+  padding: number;
+  width: number;
+  height: number;
+};
+
 let fontCache: ArrayBuffer | null = null;
 
 const FONT_SUPABASE_PATH = "data/inter-extrabold.woff";
@@ -72,6 +78,24 @@ export async function generateErizonAsset(content: ErizonContentOutput) {
     const svg = buildFallbackSvg(content, canvas, template);
     return sharp(Buffer.from(svg)).png().toBuffer();
   }
+}
+
+export function buildCreativeMeta(content: ErizonContentOutput) {
+  let engine = buildCreativeEngine(content);
+  engine = applyViralLayer(content, engine);
+  engine = enhanceForViral(engine, content);
+  const primaryNumber = extractPrimaryNumber(content);
+
+  return {
+    mode: engine.mode,
+    layout: engine.layout,
+    composition: engine.composition,
+    elements: engine.elements,
+    viralBoost: engine.viralBoost,
+    exaggeration: engine.exaggeration,
+    patternBreak: engine.patternBreak,
+    primaryNumber
+  };
 }
 
 async function loadFont(): Promise<ArrayBuffer> {
@@ -174,6 +198,7 @@ function buildCardTree(
   canvas: CanvasSpec,
   template: CardTemplate
 ) {
+  const safe = getSafeZone(canvas);
   let engine = buildCreativeEngine(content);
   engine = applyViralLayer(content, engine);
   engine = enhanceForViral(engine, content);
@@ -181,7 +206,15 @@ function buildCardTree(
   const sub = extractSubLines(content.ideia_central, 32, 2);
   const footer = truncate(content.cta, 80);
   const pillarLabel = PILLAR_LABELS[content.pilar] || content.pilar.toUpperCase();
-  const visualElements = engine.elements.map((element) => ELEMENTS[element](template.accent));
+  const primaryNumber = extractPrimaryNumber(content);
+  const visualElements = limitElements(
+    engine.elements.map((element) =>
+      ELEMENTS[element]({ accent: template.accent, primaryNumber })
+    )
+  );
+  const layoutChildren =
+    renderLayout(content, engine, template, canvas, safe, title, sub, footer, pillarLabel) ||
+    safeLayout(content, template, safe);
 
   return {
     type: "div",
@@ -193,11 +226,12 @@ function buildCardTree(
         fontFamily: "Inter",
         overflow: "hidden",
         background: template.bg
+        // border: "1px solid red"
       },
       children: [
         renderBackground(engine.mode, template),
         ...visualElements,
-        ...renderLayout(content, engine, template, canvas, title, sub, footer, pillarLabel)
+        ...layoutChildren
       ]
     }
   };
@@ -211,7 +245,8 @@ function renderBackground(mode: CreativeEngine["mode"], template: CardTemplate) 
         style: {
           position: "absolute",
           inset: "0",
-          background: "#0A0A0A"
+          background: "#0A0A0A",
+          zIndex: 0
         }
       }
     };
@@ -224,7 +259,8 @@ function renderBackground(mode: CreativeEngine["mode"], template: CardTemplate) 
         style: {
           position: "absolute",
           inset: "0",
-          background: "#000000"
+          background: "#000000",
+          zIndex: 0
         }
       }
     };
@@ -236,7 +272,8 @@ function renderBackground(mode: CreativeEngine["mode"], template: CardTemplate) 
       style: {
         position: "absolute",
         inset: "0",
-        background: template.bg
+        background: template.bg,
+        zIndex: 0
       }
     }
   };
@@ -247,24 +284,29 @@ function renderLayout(
   engine: CreativeEngine,
   template: CardTemplate,
   canvas: CanvasSpec,
+  safe: SafeZone,
   title: string[],
   sub: string[],
   footer: string,
   pillarLabel: string
 ) {
   if (engine.viralBoost >= 2) {
-    return layoutViral(content, engine, template, canvas, footer, pillarLabel);
+    return layoutViral(content, engine, template, canvas, safe, footer, pillarLabel);
+  }
+
+  if (engine.layout === "viral-dashboard") {
+    return layoutViralDashboard(content, engine, template, canvas, safe, title, sub, footer, pillarLabel);
   }
 
   if (engine.layout === "editorial-stack" || engine.layout === "split-clean") {
-    return layoutEditorial(content, engine, template, canvas, title, sub, footer, pillarLabel);
+    return layoutEditorial(content, engine, template, canvas, safe, title, sub, footer, pillarLabel);
   }
 
   if (engine.layout === "number") {
-    return layoutNumber(content, engine, template, canvas, title, sub, footer, pillarLabel);
+    return layoutNumber(content, engine, template, canvas, safe, title, sub, footer, pillarLabel);
   }
 
-  return layoutPoster(content, engine, template, canvas, title, sub, footer, pillarLabel);
+  return layoutPoster(content, engine, template, canvas, safe, title, sub, footer, pillarLabel);
 }
 
 function layoutViral(
@@ -272,41 +314,150 @@ function layoutViral(
   engine: CreativeEngine,
   template: CardTemplate,
   canvas: CanvasSpec,
+  safe: SafeZone,
   footer: string,
   pillarLabel: string
 ) {
   const lines = transformHook(content);
 
   return [
-    pillarTag(pillarLabel, template, canvas),
+    pillarTag(pillarLabel, template, safe),
+    textContainer(
+      lines.map((line) => ({
+        type: "div",
+        props: {
+          style: {
+            fontSize: `${clampFont(engine.typography.size + 20)}px`,
+            fontWeight: 900,
+            color: "#FFFFFF",
+            marginBottom: "10px",
+            lineHeight: engine.exaggeration ? "0.94" : "1.02",
+            letterSpacing: engine.exaggeration ? "-2px" : "-1px"
+          },
+          children: line
+        }
+      })),
+      safe,
+      {
+        transform: engine.patternBreak
+          ? "translate(-50%, -50%) rotate(-2deg)"
+          : "translate(-50%, -50%)"
+      }
+    ),
+    footerRow(template, safe, footer)
+  ];
+}
+
+function layoutViralDashboard(
+  content: ErizonContentOutput,
+  engine: CreativeEngine,
+  template: CardTemplate,
+  canvas: CanvasSpec,
+  safe: SafeZone,
+  title: string[],
+  sub: string[],
+  footer: string,
+  pillarLabel: string
+) {
+  const numberToken = extractPrimaryNumber(content);
+
+  return [
+    pillarTag(pillarLabel, template, safe),
     {
       type: "div",
       props: {
         style: {
           position: "absolute",
-          top: canvas.kind === "story" ? "28%" : "30%",
-          left: "8%",
-          width: "84%",
-          transform: engine.patternBreak ? "rotate(-2deg)" : "none",
-          zIndex: 2
+          top: safe.padding,
+          right: safe.padding,
+          fontSize: `${canvas.kind === "story" ? 160 : 132}px`,
+          fontWeight: "900",
+          color: `${template.accent}33`,
+          lineHeight: "0.9",
+          letterSpacing: "-6px",
+          zIndex: 0
         },
-        children: lines.map((line) => ({
+        children: numberToken
+      }
+    },
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: safe.padding + safe.height * 0.16,
+          left: safe.padding,
+          width: `${safe.width * 0.52}px`,
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          transform: engine.patternBreak ? "rotate(-1.5deg)" : "none",
+          zIndex: 10
+        },
+        children: title.map((line) => ({
           type: "div",
           props: {
             style: {
-              fontSize: `${engine.typography.size + 20}px`,
-              fontWeight: 900,
+              fontSize: `${clampFont(Math.max(48, resolveTitleSize(engine, canvas) - 10))}px`,
               color: "#FFFFFF",
-              marginBottom: "10px",
-              lineHeight: engine.exaggeration ? "0.94" : "1.02",
-              letterSpacing: engine.exaggeration ? "-2px" : "-1px"
+              fontWeight: "900",
+              lineHeight: "1.04",
+              letterSpacing: "-1px"
             },
             children: line
           }
         }))
       }
     },
-    footerRow(template, canvas, footer)
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: safe.padding + safe.height * 0.18,
+          right: safe.padding,
+          width: `${safe.width * 0.28}px`,
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          zIndex: 10
+        },
+        children: [
+          buildStatCard("DADO", numberToken, template),
+          buildStatCard("PILAR", pillarLabel.slice(0, 10), template),
+          buildStatCard("SINAL", engine.viralBoost >= 3 ? "ALTO" : "MEDIO", template)
+        ]
+      }
+    },
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: safe.padding + safe.height * 0.72,
+          left: safe.padding,
+          width: `${safe.width * 0.48}px`,
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          opacity: 0.82,
+          zIndex: 10
+        },
+        children: sub.map((line) => ({
+          type: "div",
+          props: {
+            style: {
+              fontSize: `${canvas.kind === "story" ? 24 : 20}px`,
+              color: "#D4D4D4",
+              fontWeight: "600",
+              lineHeight: "1.35"
+            },
+            children: line
+          }
+        }))
+      }
+    },
+    footerRow(template, safe, footer)
   ];
 }
 
@@ -315,60 +466,51 @@ function layoutPoster(
   engine: CreativeEngine,
   template: CardTemplate,
   canvas: CanvasSpec,
+  safe: SafeZone,
   title: string[],
   sub: string[],
   footer: string,
   pillarLabel: string
 ) {
-  const titleTop = canvas.kind === "story" ? "20%" : "22%";
-  const titleLeft = engine.composition === "left" ? "9%" : "10%";
-
   return [
-    pillarTag(pillarLabel, template, canvas),
-    {
-      type: "div",
-      props: {
-        style: composeStyle(
-          {
-            position: "absolute",
-            top: titleTop,
-            left: titleLeft,
-            width: engine.layout === "asymmetric" ? "72%" : "80%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            zIndex: 2
+    pillarTag(pillarLabel, template, safe),
+    textContainer(
+      title.map((line) => ({
+        type: "div",
+        props: {
+          style: {
+            fontSize: `${clampFont(resolveTitleSize(engine, canvas))}px`,
+            fontWeight: `${engine.typography.weight}`,
+            color: "#FFFFFF",
+            lineHeight: engine.mode === "brutalist" ? "0.96" : "1.08",
+            letterSpacing: engine.mode === "editorial" ? "1px" : "-1px"
           },
-          engine.composition
-        ),
-        children: title.map((line) => ({
-          type: "div",
-          props: {
-            style: {
-              fontSize: `${resolveTitleSize(engine, canvas)}px`,
-              fontWeight: `${engine.typography.weight}`,
-              color: "#FFFFFF",
-              lineHeight: engine.mode === "brutalist" ? "0.96" : "1.08",
-              letterSpacing: engine.mode === "editorial" ? "1px" : "-1px"
-            },
-            children: engine.layout === "poster" ? line.toUpperCase() : line
-          }
-        }))
-      }
-    },
+          children: engine.layout === "poster" ? line.toUpperCase() : line
+        }
+      })),
+      safe,
+      composeStyle(
+        {
+          top: "42%",
+          left: engine.composition === "left" ? "46%" : "50%",
+          width: `${safe.width * (engine.layout === "asymmetric" ? 0.72 : 0.8)}px`
+        },
+        engine.composition
+      )
+    ),
     {
       type: "div",
       props: {
         style: {
           position: "absolute",
-          top: canvas.kind === "story" ? "68%" : "72%",
-          left: engine.layout === "asymmetric" ? "48%" : "10%",
-          width: engine.layout === "asymmetric" ? "38%" : "44%",
+          top: safe.padding + safe.height * 0.72,
+          left: engine.layout === "asymmetric" ? `${safe.padding + safe.width * 0.48}px` : `${safe.padding}px`,
+          width: `${safe.width * (engine.layout === "asymmetric" ? 0.38 : 0.44)}px`,
           display: "flex",
           flexDirection: "column",
           gap: "8px",
           opacity: 0.78,
-          zIndex: 2
+          zIndex: 10
         },
         children: sub.map((line) => ({
           type: "div",
@@ -384,7 +526,7 @@ function layoutPoster(
         }))
       }
     },
-    footerRow(template, canvas, footer)
+    footerRow(template, safe, footer)
   ];
 }
 
@@ -393,25 +535,26 @@ function layoutEditorial(
   engine: CreativeEngine,
   template: CardTemplate,
   canvas: CanvasSpec,
+  safe: SafeZone,
   title: string[],
   sub: string[],
   footer: string,
   pillarLabel: string
 ) {
   return [
-    pillarTag(pillarLabel, template, canvas),
+    pillarTag(pillarLabel, template, safe),
     {
       type: "div",
       props: {
         style: {
           position: "absolute",
-          top: canvas.kind === "story" ? "25%" : "24%",
-          left: "10%",
-          width: engine.layout === "split-clean" ? "46%" : "60%",
+          top: safe.padding + safe.height * 0.18,
+          left: safe.padding,
+          width: `${safe.width * (engine.layout === "split-clean" ? 0.46 : 0.6)}px`,
           display: "flex",
           flexDirection: "column",
           gap: "14px",
-          zIndex: 2
+          zIndex: 10
         },
         children: [
           {
@@ -430,7 +573,7 @@ function layoutEditorial(
             type: "div",
             props: {
               style: {
-                fontSize: `${resolveTitleSize(engine, canvas)}px`,
+                fontSize: `${clampFont(resolveTitleSize(engine, canvas))}px`,
                 color: "#FFFFFF",
                 fontWeight: `${engine.typography.weight}`,
                 lineHeight: "1.15"
@@ -446,14 +589,14 @@ function layoutEditorial(
       props: {
         style: {
           position: "absolute",
-          top: canvas.kind === "story" ? "30%" : "28%",
-          right: "10%",
-          width: engine.layout === "split-clean" ? "28%" : "22%",
+          top: safe.padding + safe.height * 0.24,
+          right: safe.padding,
+          width: `${safe.width * (engine.layout === "split-clean" ? 0.28 : 0.22)}px`,
           display: "flex",
           flexDirection: "column",
           gap: "10px",
           opacity: 0.78,
-          zIndex: 2
+          zIndex: 10
         },
         children: sub.map((line) => ({
           type: "div",
@@ -469,7 +612,7 @@ function layoutEditorial(
         }))
       }
     },
-    footerRow(template, canvas, footer)
+    footerRow(template, safe, footer)
   ];
 }
 
@@ -478,6 +621,7 @@ function layoutNumber(
   engine: CreativeEngine,
   template: CardTemplate,
   canvas: CanvasSpec,
+  safe: SafeZone,
   title: string[],
   sub: string[],
   footer: string,
@@ -486,67 +630,60 @@ function layoutNumber(
   const numberToken = extractPrimaryNumber(content);
 
   return [
-    pillarTag(pillarLabel, template, canvas),
+    pillarTag(pillarLabel, template, safe),
     {
       type: "div",
       props: {
         style: {
           position: "absolute",
-          top: canvas.kind === "story" ? "12%" : "10%",
-          right: "8%",
+          top: safe.padding,
+          right: safe.padding,
           fontSize: `${canvas.kind === "story" ? 220 : 180}px`,
           fontWeight: "900",
           color: `${template.accent}F2`,
           lineHeight: "0.9",
           letterSpacing: "-8px",
-          zIndex: 1
+          zIndex: 0
         },
         children: numberToken
       }
     },
-    {
-      type: "div",
-      props: {
-        style: composeStyle(
-          {
-            position: "absolute",
-            top: canvas.kind === "story" ? "36%" : "34%",
-            left: "10%",
-            width: "72%",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            zIndex: 2
+    textContainer(
+      title.map((line) => ({
+        type: "div",
+        props: {
+          style: {
+            fontSize: `${clampFont(Math.max(46, resolveTitleSize(engine, canvas) - 18))}px`,
+            color: "#FFFFFF",
+            fontWeight: "900",
+            lineHeight: "1.04",
+            letterSpacing: "-1px"
           },
-          engine.composition
-        ),
-        children: title.map((line) => ({
-          type: "div",
-          props: {
-            style: {
-              fontSize: `${Math.max(46, resolveTitleSize(engine, canvas) - 18)}px`,
-              color: "#FFFFFF",
-              fontWeight: "900",
-              lineHeight: "1.04",
-              letterSpacing: "-1px"
-            },
-            children: line
-          }
-        }))
-      }
-    },
+          children: line
+        }
+      })),
+      safe,
+      composeStyle(
+        {
+          top: "46%",
+          left: "46%",
+          width: `${safe.width * 0.72}px`
+        },
+        engine.composition
+      )
+    ),
     {
       type: "div",
       props: {
         style: {
           position: "absolute",
-          top: canvas.kind === "story" ? "72%" : "74%",
-          left: "10%",
-          width: "42%",
+          top: safe.padding + safe.height * 0.76,
+          left: safe.padding,
+          width: `${safe.width * 0.42}px`,
           display: "flex",
           flexDirection: "column",
           gap: "8px",
-          zIndex: 2
+          zIndex: 10
         },
         children: sub.map((line) => ({
           type: "div",
@@ -561,49 +698,49 @@ function layoutNumber(
         }))
       }
     },
-    footerRow(template, canvas, footer)
+    footerRow(template, safe, footer)
   ];
 }
 
-function pillarTag(label: string, template: CardTemplate, canvas: CanvasSpec) {
+function pillarTag(label: string, template: CardTemplate, safe: SafeZone) {
   return {
     type: "div",
     props: {
       style: {
         position: "absolute",
-        top: canvas.kind === "story" ? "6%" : "7%",
-        left: "10%",
+        top: `${safe.padding}px`,
+        left: `${safe.padding}px`,
         color: template.accent,
-        fontSize: canvas.kind === "story" ? "16px" : "14px",
+        fontSize: safe.padding > 100 ? "16px" : "14px",
         letterSpacing: "4px",
         fontWeight: "700",
-        zIndex: 2
+        zIndex: 10
       },
       children: label
     }
   };
 }
 
-function footerRow(template: CardTemplate, canvas: CanvasSpec, footer: string) {
+function footerRow(template: CardTemplate, safe: SafeZone, footer: string) {
   return {
     type: "div",
     props: {
       style: {
         position: "absolute",
-        left: "10%",
-        right: "10%",
-        bottom: canvas.kind === "story" ? "5%" : "6%",
+        left: `${safe.padding}px`,
+        right: `${safe.padding}px`,
+        bottom: `${safe.padding}px`,
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        zIndex: 2
+        zIndex: 10
       },
       children: [
         {
           type: "div",
           props: {
             style: {
-              fontSize: canvas.kind === "story" ? "16px" : "14px",
+              fontSize: safe.padding > 100 ? "16px" : "14px",
               opacity: 0.34,
               letterSpacing: "4px",
               color: "#FFFFFF"
@@ -615,7 +752,7 @@ function footerRow(template: CardTemplate, canvas: CanvasSpec, footer: string) {
           type: "div",
           props: {
             style: {
-              fontSize: canvas.kind === "story" ? "20px" : "18px",
+              fontSize: safe.padding > 100 ? "20px" : "18px",
               color: template.accent,
               fontWeight: "700"
             },
@@ -627,17 +764,63 @@ function footerRow(template: CardTemplate, canvas: CanvasSpec, footer: string) {
   };
 }
 
+function buildStatCard(label: string, value: string, template: CardTemplate) {
+  return {
+    type: "div",
+    props: {
+      style: {
+        background: withAlpha(template.accent, 0.1),
+        border: `1px solid ${withAlpha(template.accent, 0.28)}`,
+        borderRadius: "16px",
+        padding: "16px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
+        zIndex: 10
+      },
+      children: [
+        {
+          type: "div",
+          props: {
+            style: {
+              color: "rgba(255,255,255,0.5)",
+              fontSize: "11px",
+              letterSpacing: "3px"
+            },
+            children: label
+          }
+        },
+        {
+          type: "div",
+          props: {
+            style: {
+              color: template.accent,
+              fontSize: "26px",
+              fontWeight: "800",
+              lineHeight: "1"
+            },
+            children: value
+          }
+        }
+      ]
+    }
+  };
+}
+
 function composeStyle(style: Record<string, unknown>, composition: Composition) {
   if (composition === "diagonal") {
-    return { ...style, transform: "rotate(-3deg)" };
+    return { ...style, transform: "translate(-50%, -50%) rotate(-3deg)" };
   }
 
   if (composition === "chaotic") {
-    return { ...style, transform: "translate(18px,-12px)" };
+    return {
+      ...style,
+      transform: "translate(calc(-50% + 18px), calc(-50% - 12px))"
+    };
   }
 
   if (composition === "right") {
-    return { ...style, left: "auto", right: style.left ?? "10%" };
+    return { ...style, left: "54%" };
   }
 
   return style;
@@ -647,6 +830,76 @@ function resolveTitleSize(engine: CreativeEngine, canvas: CanvasSpec) {
   const base = canvas.kind === "story" ? engine.typography.size : Math.max(56, engine.typography.size - 8);
   if (engine.layout === "number") return Math.max(46, base - 14);
   return base;
+}
+
+function getSafeZone(canvas: CanvasSpec): SafeZone {
+  const padding = canvas.kind === "story" ? 120 : 80;
+  return {
+    padding,
+    width: canvas.width - padding * 2,
+    height: canvas.height - padding * 2
+  };
+}
+
+function textContainer(
+  children: Array<Record<string, unknown>>,
+  safe: SafeZone,
+  styleOverrides: Record<string, unknown> = {}
+) {
+  return {
+    type: "div",
+    props: {
+      style: {
+        position: "absolute",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: `${safe.width * 0.8}px`,
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        zIndex: 10,
+        ...styleOverrides
+      },
+      children
+    }
+  };
+}
+
+function clampFont(size: number) {
+  return Math.max(42, Math.min(size, 120));
+}
+
+function limitElements(elements: Array<Record<string, unknown>>) {
+  return elements.slice(0, 3);
+}
+
+function safeLayout(
+  content: ErizonContentOutput,
+  template: CardTemplate,
+  safe: SafeZone
+) {
+  return [
+    {
+      type: "div",
+      props: {
+        style: {
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: `${safe.width * 0.82}px`,
+          textAlign: "center",
+          color: "#FFFFFF",
+          fontSize: "64px",
+          fontWeight: 800,
+          zIndex: 10
+        },
+        children: content.gancho
+      }
+    },
+    footerRow(template, safe, truncate(content.cta, 80))
+  ];
 }
 
 function buildFallbackSvg(content: ErizonContentOutput, canvas: CanvasSpec, template: CardTemplate) {
