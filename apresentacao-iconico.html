@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iconico Arquitetura — Script da Reunião</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #09090f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #1f1f2e;
+    --accent: #7c3aed;
+    --cyan: #06b6d4;
+    --gold: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+    --text: #dde1f0;
+    --muted: #5a6080;
+    --white: #ffffff;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .slide-title-top {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .counter {
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn {
+    background: var(--border);
+    border: none;
+    color: var(--text);
+    height: 30px;
+    padding: 0 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 600;
+    transition: background .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { background: var(--accent); color: #fff; }
+  .btn-next { background: var(--accent); color: #fff; }
+  .btn-next:hover { background: #6d28d9; }
+
+  /* ── PROGRESS ── */
+  .progressbar {
+    position: fixed;
+    top: 52px; left: 0; right: 0;
+    height: 3px;
+    background: var(--border);
+    z-index: 99;
+  }
+  .progressfill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--cyan));
+    transition: width .4s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── SLIDE WRAPPER ── */
+  .slides-wrap {
+    position: fixed;
+    top: 55px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 36px 48px 80px;
+    opacity: 0;
+    transform: translateX(48px);
+    transition: opacity .3s ease, transform .3s ease;
+    pointer-events: none;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: all;
+  }
+
+  .slide.exit {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+
+  /* scrollbar */
+  .slide::-webkit-scrollbar { width: 4px; }
+  .slide::-webkit-scrollbar-track { background: transparent; }
+  .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── INNER MAX WIDTH ── */
+  .inner { max-width: 960px; margin: 0 auto; }
+
+  /* ── SLIDE HEADER ── */
+  .slide-header {
+    margin-bottom: 28px;
+  }
+
+  .slide-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 100px;
+    margin-bottom: 14px;
+  }
+
+  .tag-purple { background: rgba(124,58,237,.18); color: #c4b5fd; border: 1px solid rgba(124,58,237,.35); }
+  .tag-cyan   { background: rgba(6,182,212,.13);  color: #67e8f9; border: 1px solid rgba(6,182,212,.3); }
+  .tag-gold   { background: rgba(245,158,11,.13); color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+  .tag-green  { background: rgba(16,185,129,.13); color: #6ee7b7; border: 1px solid rgba(16,185,129,.3); }
+  .tag-red    { background: rgba(239,68,68,.13);  color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+
+  .slide-title {
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 800;
+    color: var(--white);
+    line-height: 1.2;
+  }
+
+  .slide-sub {
+    font-size: 15px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* ── SCRIPT BLOCKS ── */
+  .script-section {
+    margin-bottom: 20px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .label-fala { color: #a78bfa; }
+  .label-exemplo { color: #67e8f9; }
+  .label-atencao { color: #fcd34d; }
+  .label-nao { color: #fca5a5; }
+
+  /* ── FALA BOX ── */
+  .fala-box {
+    background: rgba(124,58,237,.07);
+    border: 1px solid rgba(124,58,237,.25);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    padding: 20px 24px;
+    font-size: clamp(16px, 1.7vw, 19px);
+    line-height: 1.75;
+    color: #e2dcff;
+  }
+
+  .fala-box .pause {
+    display: inline-block;
+    background: rgba(124,58,237,.25);
+    color: #a78bfa;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 0 4px;
+    vertical-align: middle;
+  }
+
+  /* ── EXEMPLO BOX ── */
+  .exemplo-box {
+    background: rgba(6,182,212,.06);
+    border: 1px solid rgba(6,182,212,.2);
+    border-left: 4px solid var(--cyan);
+    border-radius: 0 12px 12px 0;
+    padding: 18px 24px;
+    font-size: clamp(14px, 1.5vw, 16px);
+    line-height: 1.7;
+    color: #a5f3fc;
+  }
+
+  .exemplo-box strong {
+    color: #67e8f9;
+    font-weight: 700;
+  }
+
+  .exemplo-intro {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 10px;
+    opacity: .7;
+  }
+
+  /* ── ATENCAO BOX ── */
+  .atencao-box {
+    background: rgba(245,158,11,.06);
+    border: 1px solid rgba(245,158,11,.22);
+    border-left: 4px solid var(--gold);
+    border-radius: 0 12px 12px 0;
+    padding: 16px 22px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #fde68a;
+  }
+
+  /* ── NAO BOX ── */
+  .nao-box {
+    background: rgba(239,68,68,.06);
+    border: 1px solid rgba(239,68,68,.2);
+    border-left: 4px solid var(--red);
+    border-radius: 0 12px 12px 0;
+    padding: 16px 22px;
+    font-size: 14px;
+    line-height: 1.65;
+    color: #fca5a5;
+  }
+
+  .nao-box li {
+    list-style: none;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(239,68,68,.1);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .nao-box li:last-child { border-bottom: none; }
+
+  /* ── PLAN GRID ── */
+  .plan-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .plan-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .plan-box.rec {
+    border-color: rgba(124,58,237,.5);
+    background: rgba(124,58,237,.07);
+  }
+
+  .plan-box .pname {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .plan-box .ptitle {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+
+  .plan-box .pprice {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+
+  .plan-box .pprice small {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .plan-box p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .rec-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-bottom: 8px;
+  }
+
+  /* ── DIVIDER ── */
+  .div-line {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+
+  /* ── HERO SLIDE ── */
+  .hero-wrap {
+    height: calc(100vh - 55px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: radial-gradient(ellipse at 50% 30%, rgba(124,58,237,.12) 0%, transparent 65%);
+    padding: 48px;
+  }
+
+  .hero-wrap h1 {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 900;
+    line-height: 1.05;
+    color: var(--white);
+  }
+
+  .hero-wrap h1 span {
+    background: linear-gradient(135deg, #a78bfa, #67e8f9);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 22px);
+    color: var(--muted);
+    margin-top: 18px;
+    max-width: 600px;
+  }
+
+  .hero-tags {
+    display: flex;
+    gap: 10px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .htag {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .hero-hint {
+    margin-top: 48px;
+    font-size: 13px;
+    color: var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  kbd {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 9px;
+    font-family: inherit;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── STEP FLOW ── */
+  .step-flow {
+    display: flex;
+    gap: 0;
+    margin-top: 16px;
+  }
+
+  .sf-item {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 16px 12px;
+    text-align: center;
+    position: relative;
+  }
+
+  .sf-item:first-child { border-radius: 10px 0 0 10px; }
+  .sf-item:last-child  { border-radius: 0 10px 10px 0; }
+
+  .sf-item:not(:last-child)::after {
+    content: '→';
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 800;
+    background: var(--bg);
+    padding: 2px 2px;
+    z-index: 2;
+  }
+
+  .sf-num {
+    width: 24px; height: 24px;
+    background: var(--accent);
+    border-radius: 50%;
+    font-size: 11px; font-weight: 800;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 8px;
+  }
+
+  .sf-text {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="brand">Erizon AI</span>
+    <span style="color:var(--border)">|</span>
+    <span class="slide-title-top" id="topTitle">Iconico Arquitetura</span>
+  </div>
+  <div class="topbar-right">
+    <span class="counter" id="counter">1 / 12</span>
+    <button class="btn" onclick="prev()">← Anterior</button>
+    <button class="btn btn-next" onclick="next()">Próximo →</button>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progressbar">
+  <div class="progressfill" id="prog" style="width:8.3%"></div>
+</div>
+
+<!-- SLIDES -->
+<div class="slides-wrap">
+
+  <!-- ══════════════════════════════════
+       SLIDE 1 — CAPA
+  ══════════════════════════════════ -->
+  <div class="slide active" id="s1" data-title="Início da Reunião">
+    <div class="hero-wrap">
+      <div class="slide-tag tag-purple">Script da Reunião</div>
+      <h1>Iconico<br><span>Arquitetura</span></h1>
+      <p class="hero-sub">Fala guiada + exemplos para cada momento da call</p>
+      <div class="hero-tags">
+        <span class="htag">Diagnóstico</span>
+        <span class="htag">Planos</span>
+        <span class="htag">Fechamento</span>
+      </div>
+      <p class="hero-hint">
+        <kbd>→</kbd> próximo &nbsp;·&nbsp; <kbd>←</kbd> anterior &nbsp;·&nbsp; <kbd>Space</kbd> avança
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 2 — ABERTURA DA REUNIÃO
+  ══════════════════════════════════ -->
+  <div class="slide" id="s2" data-title="Abertura da Reunião">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-purple">Momento 1 — Abertura</div>
+        <div class="slide-title">Como você começa a reunião</div>
+        <div class="slide-sub">Você fala primeiro. Mostra que estudou. Ganha autoridade logo de cara.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "Antes de qualquer coisa, eu quero te contar o que eu vi analisando as respostas de vocês…"
+          <span class="pause">pausa</span>
+          <br><br>
+          "Vocês têm um produto de alto valor, ticket alto, cliente por indicação — isso é muito bom. Mas hoje a estrutura de aquisição ainda é muito inicial."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Isso me mostra que vocês já têm validação… mas ainda não têm previsibilidade."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como soa na prática</div>
+          Imagina que você liga pra eles e começa assim:<br><br>
+          <strong>"Boa tarde! Antes de você me contar mais, deixa eu te mostrar o que eu já levantei…"</strong><br><br>
+          Aí você fala: <strong>"Olhando aqui, vocês têm uma marca com posicionamento forte, ticket alto, mas hoje o cliente chega por indicação — e isso é ótimo, mas é imprevisível. Se a indicação para, a entrada para junto."</strong><br><br>
+          Isso já coloca você no lugar de quem entende o negócio deles. Não de quem chegou pra vender anúncio.
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-atencao">Por que isso funciona</div>
+        <div class="atencao-box">
+          Você mostra que chegou preparado. A maioria das pessoas entra na call perguntando "me conta mais sobre vocês". Você já sabe. Isso muda o poder da conversa.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 3 — DIAGNÓSTICO DO PROBLEMA
+  ══════════════════════════════════ -->
+  <div class="slide" id="s3" data-title="Diagnóstico do Problema">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-red">Momento 2 — Diagnóstico</div>
+        <div class="slide-title">Nomear o problema principal</div>
+        <div class="slide-sub">O coração da venda está aqui. Se eles sentirem que você entendeu o problema deles, metade do serviço já foi vendido.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "O problema de vocês hoje não é falta de tráfego. É falta de filtro."
+          <span class="pause">pausa</span>
+          <br><br>
+          "O que vocês estão comunicando atrai muita gente — mas não necessariamente o cliente certo. E vocês já sentiram isso: vem gente que não entende o conceito, que não tem o perfil."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Se a gente rodar tráfego em cima dessa estrutura atual, a gente só escala o problema — vai entrar mais gente desalinhada."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como ilustrar isso pra eles entenderem</div>
+          <strong>"Imagina que você abre uma torneira — mas o cano tem um buraco no meio. Você não resolve jogando mais água. Você primeiro fecha o buraco."</strong><br><br>
+          É exatamente isso. Hoje o filtro tá furado. A gente primeiro fecha o filtro, aí a gente abre a torneira do tráfego.<br><br>
+          <strong>"E é exatamente isso que a gente vai fazer aqui."</strong>
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-atencao">Lembre disso</div>
+        <div class="atencao-box">
+          Eles já falaram pra você que chegam clientes que "não entendem o conceito". Esse é o problema deles. Você só está nomeando em voz alta o que eles já sentem. Isso cria conexão imediata.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 4 — LEITURA DO PERFIL
+  ══════════════════════════════════ -->
+  <div class="slide" id="s4" data-title="Leitura do Perfil Deles">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-gold">Momento 3 — Leitura do Perfil</div>
+        <div class="slide-title">Mostrar que você olhou o perfil deles</div>
+        <div class="slide-sub">Você não lista tudo. Solta 2 ou 3 pontos, como se fosse natural. Isso impressiona.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "Eu dei uma olhada rápida no perfil de vocês… e tem algumas coisas que chamaram minha atenção."
+          <span class="pause">pausa</span>
+          <br><br>
+          "O posicionamento visual é muito bom — consistente, com identidade forte. Isso já é meio caminho andado."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Mas hoje esse posicionamento não está sendo usado de forma estratégica pra filtrar o cliente certo. A bio está mais institucional, e o link não qualifica nem direciona."
+          <span class="pause">pausa</span>
+          <br><br>
+          "O resultado disso é: entra muita gente curiosa, mas pouca gente pronta."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como falar de bio fraca sem parecer crítica</div>
+          Em vez de dizer: <strong>"A bio de vocês é fraca"</strong> — você fala:<br><br>
+          <strong>"A bio hoje faz o perfil parecer mais uma vitrine do que um ponto de entrada pra um cliente qualificado. Dá pra transformar isso em algo que já filtra na leitura."</strong><br><br>
+          Em vez de: <strong>"Vocês não têm site"</strong> — você fala:<br><br>
+          <strong>"Hoje vocês estão perdendo uma etapa importante: qualificar o cliente antes dele chegar no WhatsApp. Uma estrutura simples já resolve isso."</strong>
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-nao">Não faça</div>
+        <div class="nao-box">
+          <ul>
+            <li><span>❌</span> Listar todos os problemas de uma vez</li>
+            <li><span>❌</span> Parecer que quer refazer tudo</li>
+            <li><span>❌</span> Sair apontando erro sem elogiar primeiro</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 5 — SOLUÇÃO / POSICIONAMENTO
+  ══════════════════════════════════ -->
+  <div class="slide" id="s5" data-title="Apresentar a Solução">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-cyan">Momento 4 — Solução</div>
+        <div class="slide-title">Entrar com a solução e se posicionar</div>
+        <div class="slide-sub">Aqui você define o que você faz — e se separa de todo mundo.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "O que eu faço aqui não é gerar volume de lead. É estruturar um fluxo que já filtra na entrada."
+          <span class="pause">pausa</span>
+          <br><br>
+          "A gente não quer 50 leads errados. A gente quer 5 leads certos — que entendem o que vocês fazem, têm o perfil e estão prontos pra fechar."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Vocês saem da dependência de indicação e passam a ter controle sobre a entrada de clientes. Isso é o principal ganho aqui."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como isso soa quando bem falado</div>
+          <strong>"A diferença do meu trabalho é que eu não entrego volume — eu entrego aderência."</strong><br><br>
+          Imagina dois cenários:<br><br>
+          Cenário A: você recebe 40 leads esse mês. Desses, 35 não têm perfil. Você perde tempo em reunião atrás de reunião explicando conceito.<br><br>
+          Cenário B: você recebe 6 leads. Mas os 6 já chegam sabendo o que vocês fazem, com o perfil certo, e com intenção real.<br><br>
+          <strong>"Qual dos dois você prefere?"</strong><br><br>
+          Eles vão responder o B. Aí você fala: <strong>"É exatamente esse o objetivo aqui."</strong>
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-atencao">Sua frase âncora</div>
+        <div class="atencao-box">
+          "Aqui não é sobre testar tráfego. É sobre estruturar crescimento."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 6 — APRESENTAR OS PLANOS
+  ══════════════════════════════════ -->
+  <div class="slide" id="s6" data-title="Apresentar os Planos">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-purple">Momento 5 — Os Planos</div>
+        <div class="slide-title">Como apresentar os 3 planos</div>
+        <div class="slide-sub">Você apresenta, não oferece. A decisão parece ser deles — mas você já indicou qual.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "Hoje eu trabalho com 3 níveis de estrutura — cada um tem um objetivo diferente."
+          <span class="pause">pausa</span>
+          <br><br>
+          "O primeiro é mais básico, focado só em Meta, pra começar a gerar demanda e validar o canal."
+          <br><br>
+          "O segundo já combina Meta com Google — e aí a gente começa a capturar pessoas que já estão buscando por arquitetura. Mais previsível desde o início."
+          <br><br>
+          "O terceiro é a estrutura completa, com inteligência de dados e otimização contínua — a gente usa a Erizon pra tomar decisão com base em resultado, não em achismo."
+        </div>
+      </div>
+
+      <div class="plan-row">
+        <div class="plan-box">
+          <div class="pname">Plano 1 — Entrada</div>
+          <div class="ptitle">Meta Ads</div>
+          <div class="pprice">R$ 1.000<small>/mês</small></div>
+          <p>Só Meta. Começa a gerar demanda. Valida público e oferta.</p>
+        </div>
+        <div class="plan-box rec">
+          <div class="rec-badge">✦ Recomendado</div>
+          <div class="pname">Plano 2 — Ideal</div>
+          <div class="ptitle">Meta + Google</div>
+          <div class="pprice">R$ 1.500<small>/mês</small></div>
+          <p>Fluxo previsível. Capta quem já busca. Estratégia separada por braço.</p>
+        </div>
+        <div class="plan-box">
+          <div class="pname">Plano 3 — Premium</div>
+          <div class="ptitle">Meta + Google + Erizon</div>
+          <div class="pprice">R$ 2.500<small>/mês</small></div>
+          <p>Inteligência total. Decisão com dados. Crescimento controlado.</p>
+        </div>
+      </div>
+
+      <div class="script-section" style="margin-top:20px">
+        <div class="section-label label-exemplo">Como você indica sem perguntar</div>
+        <div class="exemplo-box">
+          Você não fala <strong>"qual vocês querem?"</strong>. Você fala:<br><br>
+          <strong>"Pelo cenário de vocês, o que mais faz sentido é começar pelo plano 2 — porque já conseguimos trabalhar qualidade desde o início, com o Google capturando quem já está procurando."</strong><br><br>
+          Você decidiu. A autoridade é sua.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 7 — QUEBRAR OBJEÇÃO DE PREÇO
+  ══════════════════════════════════ -->
+  <div class="slide" id="s7" data-title="Lidar com Orçamento">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-gold">Momento 6 — Orçamento</div>
+        <div class="slide-title">Eles disseram R$1.000. Como lidar.</div>
+        <div class="slide-sub">Você não bate de frente. Você reposiciona o valor antes de falar em número.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "Vocês colocaram um investimento inicial de até R$1.000 — e faz sentido pra começar."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Mas deixa eu te fazer uma pergunta rápida: se entrar 1 cliente certo por mês com vocês, quanto esse cliente representa em faturamento?"
+          <span class="pause">espera a resposta</span>
+          <br><br>
+          "Então… com ticket alto como o de vocês, a gente não precisa de volume. A gente precisa de poucos clientes certos — e o investimento se paga com 1 fechamento."
+          <span class="pause">pausa</span>
+          <br><br>
+          "A gente pode começar num patamar mais controlado e ajustar conforme for validando."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como soa quando bem executado</div>
+          Eles dizem: <strong>"a gente tem até R$1.000 pra investir"</strong>.<br><br>
+          Você responde: <strong>"Entendido. Qual é o ticket médio de um projeto de vocês?"</strong><br><br>
+          Eles respondem, digamos: <strong>"em torno de R$15.000"</strong>.<br><br>
+          Você fala: <strong>"Então 1 cliente paga o serviço por 10 meses. Não precisamos de 50 leads — precisamos de 1 cliente certo por mês. E é isso que a gente vai construir."</strong><br><br>
+          Isso quebra a objeção de preço sem nem precisar discutir preço.
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-atencao">O argumento central</div>
+        <div class="atencao-box">
+          "Como o ticket é alto, a gente não precisa de volume — precisa de poucos clientes certos. O investimento se paga com 1 fechamento."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 8 — BRAÇOS COMERCIAL/RESIDENCIAL
+  ══════════════════════════════════ -->
+  <div class="slide" id="s8" data-title="Comercial vs Residencial">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-cyan">Momento 7 — Estratégia</div>
+        <div class="slide-title">Mostrar que você entende os 2 braços</div>
+        <div class="slide-sub">Esse é o detalhe que separa você de qualquer outro gestor. Mostre que você entende a diferença entre Comercial e Residencial.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "Uma coisa que eu quero deixar clara desde já: o Comercial e o Residencial de vocês são públicos completamente diferentes — e precisam de estratégias diferentes."
+          <span class="pause">pausa</span>
+          <br><br>
+          "No Comercial, a decisão é mais racional, mais rápida. Google e LinkedIn funcionam muito bem — a pessoa já está buscando, já tem intenção."
+          <span class="pause">pausa</span>
+          <br><br>
+          "No Residencial, é diferente. A decisão é emocional, mais demorada, e precisa de posicionamento. O cliente precisa se identificar com o que vocês constroem antes de entrar em contato."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Se a gente rodar a mesma campanha pros dois, a gente dilui os dois. A gente vai criar estratégias separadas."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como isso soa na prática</div>
+          <strong>"Pensa assim: o cliente comercial de vocês — uma empresa, um gestor de espaço — ele digita no Google 'escritório de arquitetura comercial São Paulo'. Ele já quer. A gente aparece na hora certa."</strong><br><br>
+          <strong>"O cliente residencial não busca assim. Ele vê um projeto bonito no Instagram, se identifica com o estilo, salva, acompanha por semanas — e aí entra em contato. Pra esse, a gente trabalha posicionamento e filtro de perfil."</strong><br><br>
+          Isso mostra maturidade estratégica. Eles vão pensar: esse cara entende o nosso negócio de verdade.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 9 — TRANSIÇÃO PRO FECHAMENTO
+  ══════════════════════════════════ -->
+  <div class="slide" id="s9" data-title="Transição para o Fechamento">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-green">Momento 8 — Transição</div>
+        <div class="slide-title">Como entrar no fechamento</div>
+        <div class="slide-sub">Você não fecha do nada. Você faz uma transição elegante que recapitula e direciona.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar</div>
+        <div class="fala-box">
+          "Deixa eu recapitular o que eu vi de vocês…"
+          <span class="pause">pausa</span>
+          <br><br>
+          "Vocês já têm validação — os clientes vêm por indicação, o ticket é alto, a marca é forte. Isso é muito bom."
+          <span class="pause">pausa</span>
+          <br><br>
+          "O que falta é transformar isso em algo previsível. Não depender de indicação pra crescer."
+          <span class="pause">pausa</span>
+          <br><br>
+          "E é exatamente nisso que eu entro. A gente cria um fluxo que traz o cliente certo — com consistência, sem precisar esperar alguém indicar."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Pelo que vocês me mostraram, o plano 2 é o que faz mais sentido pra começar. Faz sentido pra vocês começarmos dessa forma?"
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo de como soa a transição completa</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Do diagnóstico ao fechamento — em sequência</div>
+          <strong>"Então, recapitulando: vocês têm produto validado, ticket alto, marca consistente. O problema hoje é que a entrada de clientes depende de algo que vocês não controlam."</strong><br><br>
+          <strong>"O trabalho aqui é estruturar isso. Criar um canal previsível que já filtra na entrada."</strong><br><br>
+          <strong>"Pelo cenário de vocês, o plano 2 é o ideal — Meta mais Google, estratégias separadas por braço, e a gente já começa com qualidade."</strong><br><br>
+          <strong>"Faz sentido pra vocês a gente começar assim?"</strong><br><br>
+          Silêncio. Espera a resposta. Não fala antes deles.
+        </div>
+      </div>
+
+      <div class="step-flow">
+        <div class="sf-item"><div class="sf-num">1</div><div class="sf-text">Mostra o problema</div></div>
+        <div class="sf-item"><div class="sf-num">2</div><div class="sf-text">Mostra o caminho</div></div>
+        <div class="sf-item"><div class="sf-num">3</div><div class="sf-text">Indica o plano</div></div>
+        <div class="sf-item"><div class="sf-num">4</div><div class="sf-text">"Faz sentido?"</div></div>
+        <div class="sf-item"><div class="sf-num">5</div><div class="sf-text">Pede o início</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 10 — SE HESITAREM
+  ══════════════════════════════════ -->
+  <div class="slide" id="s10" data-title="Se Hesitarem">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-gold">Momento 9 — Objeção</div>
+        <div class="slide-title">Se eles hesitarem ou travar</div>
+        <div class="slide-sub">Normal acontecer. Você não pressiona. Você reposiciona com calma.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar se hesitarem no preço</div>
+        <div class="fala-box">
+          "Eu entendo. Vocês colocaram um investimento mais inicial, e isso é totalmente compreensível."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Mas como o ticket de vocês é alto, a gente não precisa de volume — precisa de poucos clientes certos. E esse investimento se paga com 1 projeto fechado."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Se a gente estruturar isso agora, vocês saem da dependência de indicação e passam a ter controle sobre a entrada de clientes."
+          <span class="pause">pausa</span>
+          <br><br>
+          "E esse é o principal ganho aqui."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar se pedirem pra pensar</div>
+        <div class="fala-box">
+          "Claro, sem problema."
+          <span class="pause">pausa</span>
+          <br><br>
+          "Só me diz — tem alguma dúvida específica que ficou? Porque às vezes a dúvida é sobre algo que eu posso esclarecer agora mesmo."
+          <span class="pause">espera</span>
+          <br><br>
+          "Se não tiver, eu te mando um resumo do que a gente conversou hoje ainda essa semana — assim fica mais fácil de visualizar."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo prático</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como reposicionar valor quando hesitam</div>
+          Eles falam: <strong>"a gente precisa pensar..."</strong><br><br>
+          Você responde: <strong>"Entendo. Antes de eu deixar vocês pensarem — tem alguma coisa que ficou sem clareza? Porque às vezes o que parece dúvida é só uma informação que faltou."</strong><br><br>
+          Se disserem que é o preço:<br><br>
+          <strong>"Faz sentido. Mas me conta — se vocês fecharem 1 cliente do perfil certo esse mês, quanto isso representa pra vocês?"</strong><br><br>
+          Aí eles respondem e você faz a conta na hora com eles. O preço vira pequeno.
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-nao">Nunca diga isso</div>
+        <div class="nao-box">
+          <ul>
+            <li><span>❌</span> "O que você acha?" — retira sua autoridade</li>
+            <li><span>❌</span> "Quer pensar?" — convida a sair da call sem decisão</li>
+            <li><span>❌</span> "Qual plano você prefere?" — você decide, não eles</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 11 — FECHAMENTO FINAL
+  ══════════════════════════════════ -->
+  <div class="slide" id="s11" data-title="Fechamento Final">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-green">Momento 10 — Fechamento</div>
+        <div class="slide-title">Quando eles dizem sim</div>
+        <div class="slide-sub">Você não pergunta de novo. Não reconfirma. Você já passa pra próxima etapa direto.</div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-fala">O que falar quando fechou</div>
+        <div class="fala-box">
+          "Perfeito."
+          <span class="pause">pausa curta</span>
+          <br><br>
+          "Então eu já te envio o onboarding completo ainda hoje — tem tudo que eu preciso pra montar a estrutura de vocês."
+          <span class="pause">pausa</span>
+          <br><br>
+          "A gente consegue iniciar ainda essa semana."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-exemplo">Exemplo completo do fechamento</div>
+        <div class="exemplo-box">
+          <div class="exemplo-intro">Como soa o fechamento do início ao fim</div>
+          Você faz a transição: <strong>"Faz sentido pra vocês começarmos dessa forma?"</strong><br><br>
+          Eles respondem: <strong>"Sim, faz sentido."</strong><br><br>
+          Você fala com calma: <strong>"Perfeito. Vou te mandar o link de onboarding ainda hoje. Você preenche e a gente já começa a estrutura essa semana."</strong><br><br>
+          Pronto. Não tem mais "e aí, o que você acha?". Não tem hesitação. Você já está na próxima etapa.
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-atencao">Frase de encerramento (se quiser usar)</div>
+        <div class="atencao-box">
+          "Aqui não é sobre testar tráfego. É sobre estruturar crescimento — e a gente começa agora."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════
+       SLIDE 12 — RESUMO
+  ══════════════════════════════════ -->
+  <div class="slide" id="s12" data-title="Resumo da Call">
+    <div class="inner">
+      <div class="slide-header">
+        <div class="slide-tag tag-purple">Resumo</div>
+        <div class="slide-title">O mapa completo da reunião</div>
+        <div class="slide-sub">Antes de entrar na call, releia isso. Esses são os 10 momentos em sequência.</div>
+      </div>
+
+      <div class="step-flow" style="flex-wrap:wrap;gap:8px">
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">1</div>
+          <div class="sf-text">Você chegou preparado</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">2</div>
+          <div class="sf-text">Nomeia o problema</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">3</div>
+          <div class="sf-text">Leitura do perfil</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">4</div>
+          <div class="sf-text">Apresenta a solução</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">5</div>
+          <div class="sf-text">Apresenta os planos</div>
+        </div>
+      </div>
+
+      <div class="step-flow" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">6</div>
+          <div class="sf-text">Reposiciona o preço</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">7</div>
+          <div class="sf-text">Separa os braços</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">8</div>
+          <div class="sf-text">Transição elegante</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">9</div>
+          <div class="sf-text">Lida com objeção</div>
+        </div>
+        <div class="sf-item" style="min-width:140px;border-radius:10px;margin:0">
+          <div class="sf-num">10</div>
+          <div class="sf-text">Fecha + onboarding</div>
+        </div>
+      </div>
+
+      <hr class="div-line">
+
+      <div class="script-section">
+        <div class="section-label label-fala">As 3 frases que você PRECISA saber de cor</div>
+        <div class="fala-box">
+          1. "O problema não é falta de tráfego. É falta de filtro."
+          <br><br>
+          2. "A gente não quer 50 leads errados. A gente quer 5 leads certos."
+          <br><br>
+          3. "Aqui não é sobre testar tráfego. É sobre estruturar crescimento."
+        </div>
+      </div>
+
+      <div class="script-section">
+        <div class="section-label label-atencao">Mentalidade certa pra entrar na call</div>
+        <div class="atencao-box">
+          Você não está pedindo permissão. Você está chegando como quem resolve um problema específico que eles têm — e você já sabe qual é. Isso muda tudo.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /slides-wrap -->
+
+<script>
+  const total = 12;
+  let cur = 1;
+
+  const titles = {
+    1:  'Início da Reunião',
+    2:  'Abertura — O que falar primeiro',
+    3:  'Diagnóstico — O Problema Principal',
+    4:  'Leitura do Perfil Deles',
+    5:  'Apresentar a Solução',
+    6:  'Os 3 Planos',
+    7:  'Lidar com Orçamento R$1.000',
+    8:  'Comercial vs Residencial',
+    9:  'Transição pro Fechamento',
+    10: 'Se Hesitarem',
+    11: 'Fechamento Final',
+    12: 'Resumo da Call',
+  };
+
+  function goTo(n) {
+    const prevEl = document.getElementById('s' + cur);
+    prevEl.classList.remove('active');
+    prevEl.classList.add('exit');
+    setTimeout(() => prevEl.classList.remove('exit'), 350);
+
+    cur = Math.max(1, Math.min(total, n));
+
+    const nextEl = document.getElementById('s' + cur);
+    nextEl.classList.add('active');
+    nextEl.scrollTop = 0;
+
+    document.getElementById('counter').textContent = cur + ' / ' + total;
+    document.getElementById('topTitle').textContent = titles[cur] || '';
+    document.getElementById('prog').style.width = (cur / total * 100).toFixed(1) + '%';
+  }
+
+  function next() { if (cur < total) goTo(cur + 1); }
+  function prev() { if (cur > 1)     goTo(cur - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft')                   { e.preventDefault(); prev(); }
+  });
+
+  let tx = 0;
+  document.addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  document.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) dx < 0 ? next() : prev();
+  });
+</script>
+</body>
+</html>

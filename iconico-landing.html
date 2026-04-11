@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICONICO — Arquitetura que transforma espaços</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black:   #0a0806;
+    --dark:    #111009;
+    --card:    #181510;
+    --border:  #2a2418;
+    --border2: #3a3020;
+    --brown:   #8B6914;
+    --gold:    #c9973a;
+    --gold2:   #e8b96a;
+    --cream:   #f0e8d8;
+    --text:    #d4cbb8;
+    --muted:   #6b6050;
+    --white:   #faf7f2;
+    --com:     #c9973a;
+    --res:     #8fad72;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .serif { font-family: Georgia, 'Times New Roman', serif; }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 24px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(201,151,58,.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 20% 100%, rgba(143,173,114,.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .hero-logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 48px;
+  }
+
+  .logo-mark {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    color: var(--gold);
+    line-height: 1.2;
+    text-align: center;
+  }
+
+  .logo-name {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid rgba(201,151,58,.3);
+    padding: 5px 16px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+    background: rgba(201,151,58,.06);
+  }
+
+  .hero-title {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: 300;
+    line-height: 1.1;
+    color: var(--white);
+    letter-spacing: -.02em;
+    margin-bottom: 24px;
+    font-family: Georgia, serif;
+  }
+
+  .hero-title strong {
+    font-weight: 700;
+    color: var(--gold2);
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 20px);
+    color: var(--muted);
+    max-width: 540px;
+    line-height: 1.7;
+    margin-bottom: 56px;
+  }
+
+  /* ── SPLIT CHOICE ── */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .split-card {
+    border-radius: 20px;
+    padding: 36px 28px;
+    cursor: pointer;
+    transition: transform .25s ease, box-shadow .25s ease;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+    border: none;
+    background: none;
+    width: 100%;
+  }
+
+  .split-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    opacity: 0;
+    transition: opacity .25s;
+  }
+
+  .split-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .split-card:hover::before { opacity: 1; }
+
+  .split-com {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    box-shadow: inset 0 1px 0 rgba(201,151,58,.1);
+  }
+
+  .split-com::before {
+    background: linear-gradient(135deg, rgba(201,151,58,.08) 0%, transparent 60%);
+  }
+
+  .split-com:hover {
+    border-color: rgba(201,151,58,.5);
+    box-shadow: 0 20px 60px rgba(201,151,58,.12), inset 0 1px 0 rgba(201,151,58,.2);
+  }
+
+  .split-res {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    box-shadow: inset 0 1px 0 rgba(143,173,114,.08);
+  }
+
+  .split-res::before {
+    background: linear-gradient(135deg, rgba(143,173,114,.08) 0%, transparent 60%);
+  }
+
+  .split-res:hover {
+    border-color: rgba(143,173,114,.45);
+    box-shadow: 0 20px 60px rgba(143,173,114,.1), inset 0 1px 0 rgba(143,173,114,.15);
+  }
+
+  .card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 18px;
+  }
+
+  .icon-com { background: rgba(201,151,58,.12); }
+  .icon-res { background: rgba(143,173,114,.12); }
+
+  .card-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .label-com { color: var(--gold); }
+  .label-res { color: var(--res); }
+
+  .card-title {
+    font-size: clamp(18px, 2.5vw, 24px);
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 10px;
+    font-family: Georgia, serif;
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.65;
+    margin-bottom: 20px;
+  }
+
+  .card-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .05em;
+  }
+
+  .cta-com { color: var(--gold); }
+  .cta-res { color: var(--res); }
+
+  .cta-arrow {
+    font-size: 16px;
+    transition: transform .2s;
+  }
+
+  .split-card:hover .cta-arrow { transform: translateX(4px); }
+
+  /* ── SCROLL HINT ── */
+  .scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    animation: bob 2s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%       { transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* ── FORM SECTION ── */
+  .form-section {
+    display: none;
+    min-height: 100vh;
+    padding: 80px 24px;
+  }
+
+  .form-section.visible { display: flex; flex-direction: column; align-items: center; }
+
+  .form-wrap {
+    width: 100%;
+    max-width: 600px;
+  }
+
+  /* ── BACK BUTTON ── */
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    margin-bottom: 40px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    transition: color .15s;
+    padding: 0;
+  }
+
+  .back-btn:hover { color: var(--text); }
+
+  /* ── FORM HEADER ── */
+  .form-header {
+    margin-bottom: 40px;
+  }
+
+  .form-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    padding: 4px 14px;
+    border-radius: 100px;
+    margin-bottom: 18px;
+  }
+
+  .badge-com { background: rgba(201,151,58,.12); color: var(--gold); border: 1px solid rgba(201,151,58,.25); }
+  .badge-res { background: rgba(143,173,114,.1); color: var(--res); border: 1px solid rgba(143,173,114,.2); }
+
+  .form-title {
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 300;
+    color: var(--white);
+    line-height: 1.2;
+    font-family: Georgia, serif;
+    margin-bottom: 12px;
+  }
+
+  .form-title strong { font-weight: 700; }
+
+  .form-desc {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ── PROGRESS STEPS ── */
+  .steps-bar {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 40px;
+  }
+
+  .step-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: background .3s, color .3s, border-color .3s;
+    border: 1px solid var(--border2);
+    background: var(--card);
+    color: var(--muted);
+  }
+
+  .step-dot.active-com  { background: var(--gold); color: var(--black); border-color: var(--gold); }
+  .step-dot.done-com    { background: rgba(201,151,58,.15); color: var(--gold); border-color: rgba(201,151,58,.4); }
+  .step-dot.active-res  { background: var(--res); color: var(--black); border-color: var(--res); }
+  .step-dot.done-res    { background: rgba(143,173,114,.15); color: var(--res); border-color: rgba(143,173,114,.35); }
+
+  .step-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border2);
+    margin: 0 6px;
+    transition: background .3s;
+  }
+
+  .step-line.done-com { background: rgba(201,151,58,.3); }
+  .step-line.done-res { background: rgba(143,173,114,.25); }
+
+  /* ── FORM STEP ── */
+  .form-step { display: none; }
+  .form-step.active { display: block; }
+
+  /* ── FIELDS ── */
+  .field-group {
+    margin-bottom: 22px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  select,
+  textarea {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 15px;
+    color: var(--white);
+    font-family: inherit;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,151,58,.1);
+  }
+
+  .res-focus input:focus, .res-focus select:focus, .res-focus textarea:focus {
+    border-color: var(--res);
+    box-shadow: 0 0 0 3px rgba(143,173,114,.1);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b6050' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    padding-right: 44px;
+    cursor: pointer;
+  }
+
+  select option { background: #1a1710; color: var(--white); }
+
+  textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* ── RADIO CARDS ── */
+  .radio-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .radio-card {
+    position: relative;
+  }
+
+  .radio-card input {
+    position: absolute;
+    opacity: 0;
+    width: 0; height: 0;
+  }
+
+  .radio-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+  }
+
+  .radio-label:hover { border-color: var(--border2); background: rgba(255,255,255,.02); }
+
+  .radio-card input:checked + .radio-label {
+    border-color: var(--gold);
+    background: rgba(201,151,58,.07);
+  }
+
+  .res-section .radio-card input:checked + .radio-label {
+    border-color: var(--res);
+    background: rgba(143,173,114,.07);
+  }
+
+  .rl-main {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .rl-sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── FORM NAVIGATION ── */
+  .form-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32px;
+    gap: 12px;
+  }
+
+  .btn-prev {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color .2s, color .2s;
+  }
+
+  .btn-prev:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-next-form {
+    flex: 1;
+    padding: 16px 28px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    border: none;
+    letter-spacing: .02em;
+    transition: opacity .2s, transform .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn-next-form:hover { opacity: .9; transform: translateY(-1px); }
+  .btn-next-form:active { transform: translateY(0); }
+
+  .btn-com { background: linear-gradient(135deg, #c9973a, #e8b96a); color: var(--black); }
+  .btn-res { background: linear-gradient(135deg, #7a9e60, #a8c989); color: var(--black); }
+
+  /* ── SUCCESS ── */
+  .success-wrap {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .success-wrap.visible { display: flex; }
+
+  .success-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin: 0 auto 28px;
+    animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .icon-success-com { background: rgba(201,151,58,.15); }
+  .icon-success-res { background: rgba(143,173,114,.15); }
+
+  .success-title {
+    font-size: clamp(24px, 3vw, 36px);
+    font-weight: 300;
+    color: var(--white);
+    font-family: Georgia, serif;
+    margin-bottom: 14px;
+  }
+
+  .success-title strong { font-weight: 700; }
+
+  .success-text {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 420px;
+    line-height: 1.7;
+    margin-bottom: 36px;
+  }
+
+  .wpp-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+    transition: opacity .2s, transform .15s;
+    border: none;
+  }
+
+  .wpp-btn:hover { opacity: .9; transform: translateY(-2px); }
+  .wpp-com { background: linear-gradient(135deg, #c9973a, #e8b96a); color: var(--black); }
+  .wpp-res { background: linear-gradient(135deg, #7a9e60, #a8c989); color: var(--black); }
+
+  /* ── SOCIAL PROOF ── */
+  .proof-bar {
+    border-top: 1px solid var(--border);
+    padding: 40px 24px;
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+
+  .proof-item {
+    text-align: center;
+  }
+
+  .proof-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold2);
+    font-family: Georgia, serif;
+    display: block;
+  }
+
+  .proof-label {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    display: block;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .split { grid-template-columns: 1fr; max-width: 400px; }
+    .field-row { grid-template-columns: 1fr; }
+    .radio-grid { grid-template-columns: 1fr; }
+    .form-nav { flex-direction: column-reverse; }
+    .btn-prev { width: 100%; }
+    .btn-next-form { width: 100%; flex: none; }
+    .proof-bar { gap: 28px; }
+  }
+
+  /* ── FADE IN ── */
+  .fade-in {
+    animation: fadeUp .5s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── DIVIDER ── */
+  .sep {
+    width: 40px; height: 1px;
+    background: var(--border2);
+    margin: 24px auto;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════
+     HERO — ESCOLHA O CAMINHO
+════════════════════════════════════ -->
+<section class="hero" id="hero">
+  <div class="hero-logo">
+    <div class="logo-mark">ICO<br>NI<br>CO</div>
+    <span class="logo-name">Arquitetura</span>
+  </div>
+
+  <span class="hero-tag">Transformamos espaços em experiências</span>
+
+  <h1 class="hero-title serif">
+    Arquitetura feita<br>
+    para <strong>quem sabe</strong><br>
+    o que quer
+  </h1>
+
+  <p class="hero-sub">
+    Conte-nos sobre seu projeto. Em poucos minutos vamos entender o que você precisa e entrar em contato com uma proposta alinhada ao seu perfil.
+  </p>
+
+  <div class="split">
+    <button class="split-card split-com" onclick="openForm('com')">
+      <div class="card-icon icon-com">🏢</div>
+      <div class="card-label label-com">Iconico Arquitetura</div>
+      <div class="card-title serif">Projeto Comercial</div>
+      <p class="card-desc">Restaurantes, escritórios, varejo e espaços corporativos. Arquitetura que gera resultado.</p>
+      <span class="card-cta cta-com">Quero um projeto comercial <span class="cta-arrow">→</span></span>
+    </button>
+
+    <button class="split-card split-res" onclick="openForm('res')">
+      <div class="card-icon icon-res">🏡</div>
+      <div class="card-label label-res">Iconico do Brasil</div>
+      <div class="card-title serif">Projeto Residencial</div>
+      <p class="card-desc">Residências com curadoria brasileira. Identidade, estética e vivência em cada detalhe.</p>
+      <span class="card-cta cta-res">Quero um projeto residencial <span class="cta-arrow">→</span></span>
+    </button>
+  </div>
+
+  <div class="scroll-hint">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M3 8l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════
+     SOCIAL PROOF
+════════════════════════════════════ -->
+<div class="proof-bar" id="proof">
+  <div class="proof-item">
+    <span class="proof-num">+80</span>
+    <span class="proof-label">Projetos entregues</span>
+  </div>
+  <div class="proof-item">
+    <span class="proof-num">2</span>
+    <span class="proof-label">Braços especializados</span>
+  </div>
+  <div class="proof-item">
+    <span class="proof-num">100%</span>
+    <span class="proof-label">Projetos autorais</span>
+  </div>
+  <div class="proof-item">
+    <span class="proof-num serif" style="font-style:italic">São Paulo</span>
+    <span class="proof-label">Base de operação</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     FORMULÁRIO — COMERCIAL
+════════════════════════════════════ -->
+<section class="form-section" id="form-com">
+  <div class="form-wrap fade-in">
+
+    <button class="back-btn" onclick="goBack()">← Voltar</button>
+
+    <div class="form-header">
+      <span class="form-badge badge-com">Iconico Arquitetura — Comercial</span>
+      <h2 class="form-title serif">Vamos entender<br><strong>o seu projeto</strong></h2>
+      <p class="form-desc">Responda as perguntas abaixo. Leva menos de 2 minutos e nos ajuda a chegar preparados.</p>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="steps-bar" id="steps-com">
+      <div class="step-dot active-com" id="com-dot-1">1</div>
+      <div class="step-line" id="com-line-1"></div>
+      <div class="step-dot" id="com-dot-2">2</div>
+      <div class="step-line" id="com-line-2"></div>
+      <div class="step-dot" id="com-dot-3">3</div>
+    </div>
+
+    <form id="formCom" onsubmit="return false;">
+
+      <!-- STEP 1 — SOBRE O ESPAÇO -->
+      <div class="form-step active" id="com-step-1">
+        <div class="field-group">
+          <label>Tipo de espaço</label>
+          <div class="radio-grid">
+            <div class="radio-card">
+              <input type="radio" name="tipo_com" id="t1" value="Restaurante / Bar">
+              <label class="radio-label" for="t1">
+                <span class="rl-main">🍽️ Restaurante / Bar</span>
+                <span class="rl-sub">Gastronomia e experiência</span>
+              </label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="tipo_com" id="t2" value="Escritório / Corporativo">
+              <label class="radio-label" for="t2">
+                <span class="rl-main">🏢 Escritório / Corporativo</span>
+                <span class="rl-sub">Produtividade e cultura</span>
+              </label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="tipo_com" id="t3" value="Varejo / Loja">
+              <label class="radio-label" for="t3">
+                <span class="rl-main">🛍️ Varejo / Loja</span>
+                <span class="rl-sub">Retail design e conversão</span>
+              </label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="tipo_com" id="t4" value="Outro">
+              <label class="radio-label" for="t4">
+                <span class="rl-main">✦ Outro</span>
+                <span class="rl-sub">Me conta mais</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>Metragem estimada</label>
+            <select id="com_metragem">
+              <option value="">Selecione</option>
+              <option>Até 100m²</option>
+              <option>100m² – 300m²</option>
+              <option>300m² – 600m²</option>
+              <option>Acima de 600m²</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Cidade</label>
+            <input type="text" id="com_cidade" placeholder="Ex: São Paulo – SP">
+          </div>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn-next-form btn-com" onclick="nextStep('com', 1)">
+            Continuar <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2 — INVESTIMENTO E PRAZO -->
+      <div class="form-step" id="com-step-2">
+        <div class="field-group">
+          <label>Faixa de investimento no projeto</label>
+          <div class="radio-grid">
+            <div class="radio-card">
+              <input type="radio" name="inv_com" id="i1" value="Até R$ 50 mil">
+              <label class="radio-label" for="i1"><span class="rl-main">Até R$ 50 mil</span></label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="inv_com" id="i2" value="R$ 50k – R$ 150k">
+              <label class="radio-label" for="i2"><span class="rl-main">R$ 50k – R$ 150k</span></label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="inv_com" id="i3" value="R$ 150k – R$ 400k">
+              <label class="radio-label" for="i3"><span class="rl-main">R$ 150k – R$ 400k</span></label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="inv_com" id="i4" value="Acima de R$ 400k">
+              <label class="radio-label" for="i4"><span class="rl-main">Acima de R$ 400k</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Prazo para início do projeto</label>
+          <select id="com_prazo">
+            <option value="">Selecione</option>
+            <option>Imediato (já decidido)</option>
+            <option>1 a 3 meses</option>
+            <option>3 a 6 meses</option>
+            <option>Ainda estou pesquisando</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label>O que é mais importante pra você neste projeto?</label>
+          <textarea id="com_prioridade" placeholder="Ex: identidade da marca, experiência do cliente, prazo de entrega…"></textarea>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn-prev" onclick="prevStep('com', 2)">← Voltar</button>
+          <button class="btn-next-form btn-com" onclick="nextStep('com', 2)">
+            Continuar <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3 — CONTATO -->
+      <div class="form-step" id="com-step-3">
+        <div class="field-group">
+          <label>Seu nome</label>
+          <input type="text" id="com_nome" placeholder="Como prefere ser chamado(a)?">
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>WhatsApp</label>
+            <input type="tel" id="com_wpp" placeholder="(11) 9 0000-0000">
+          </div>
+          <div class="field-group">
+            <label>E-mail</label>
+            <input type="email" id="com_email" placeholder="seu@email.com">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Como chegou até nós?</label>
+          <select id="com_origem">
+            <option value="">Selecione</option>
+            <option>Instagram @iconicoarquitetura</option>
+            <option>Indicação de alguém</option>
+            <option>Google</option>
+            <option>LinkedIn</option>
+            <option>Já conheço o trabalho</option>
+            <option>Outro</option>
+          </select>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn-prev" onclick="prevStep('com', 3)">← Voltar</button>
+          <button class="btn-next-form btn-com" onclick="submitForm('com')">
+            Enviar solicitação ✓
+          </button>
+        </div>
+      </div>
+
+    </form>
+
+    <!-- SUCCESS COM -->
+    <div class="success-wrap" id="success-com">
+      <div class="success-icon icon-success-com">✦</div>
+      <h3 class="success-title serif">Solicitação<br><strong>recebida</strong></h3>
+      <p class="success-text">
+        Obrigado pelo interesse. Nossa equipe vai analisar seu projeto e entrar em contato em breve — prontos pra conversar de verdade.
+      </p>
+      <a class="wpp-btn wpp-com" href="https://wa.me/5511999999999?text=Ol%C3%A1%21+Acabei+de+preencher+o+formul%C3%A1rio+da+Iconico+Arquitetura+(projeto+comercial)." target="_blank">
+        💬 Falar pelo WhatsApp agora
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<!-- ════════════════════════════════════
+     FORMULÁRIO — RESIDENCIAL
+════════════════════════════════════ -->
+<section class="form-section res-section" id="form-res">
+  <div class="form-wrap fade-in">
+
+    <button class="back-btn" onclick="goBack()">← Voltar</button>
+
+    <div class="form-header">
+      <span class="form-badge badge-res">Iconico do Brasil — Residencial</span>
+      <h2 class="form-title serif">Vamos entender<br><strong>o seu projeto</strong></h2>
+      <p class="form-desc">Responda as perguntas abaixo. Leva menos de 2 minutos e nos ajuda a chegar preparados.</p>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="steps-bar" id="steps-res">
+      <div class="step-dot active-res" id="res-dot-1">1</div>
+      <div class="step-line" id="res-line-1"></div>
+      <div class="step-dot" id="res-dot-2">2</div>
+      <div class="step-line" id="res-line-2"></div>
+      <div class="step-dot" id="res-dot-3">3</div>
+    </div>
+
+    <form id="formRes" onsubmit="return false;" class="res-focus">
+
+      <!-- STEP 1 — SOBRE O PROJETO -->
+      <div class="form-step active" id="res-step-1">
+        <div class="field-group">
+          <label>Tipo de projeto</label>
+          <div class="radio-grid res-section">
+            <div class="radio-card">
+              <input type="radio" name="tipo_res" id="r1" value="Projeto completo (do zero)">
+              <label class="radio-label" for="r1">
+                <span class="rl-main">🏗️ Projeto completo</span>
+                <span class="rl-sub">Do zero, obra inclusa</span>
+              </label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="tipo_res" id="r2" value="Reforma / Retrofit">
+              <label class="radio-label" for="r2">
+                <span class="rl-main">🔨 Reforma / Retrofit</span>
+                <span class="rl-sub">Atualizar e transformar</span>
+              </label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="tipo_res" id="r3" value="Interiores / Decoração">
+              <label class="radio-label" for="r3">
+                <span class="rl-main">🛋️ Interiores</span>
+                <span class="rl-sub">Ambientação e mobiliário</span>
+              </label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="tipo_res" id="r4" value="Curadoria de objetos">
+              <label class="radio-label" for="r4">
+                <span class="rl-main">🎨 Curadoria</span>
+                <span class="rl-sub">Arte e objetos brasileiros</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>Tipo de imóvel</label>
+            <select id="res_imovel">
+              <option value="">Selecione</option>
+              <option>Apartamento</option>
+              <option>Casa</option>
+              <option>Casa de campo / Sítio</option>
+              <option>Cobertura</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label>Cidade</label>
+            <input type="text" id="res_cidade" placeholder="Ex: São Paulo – SP">
+          </div>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn-next-form btn-res" onclick="nextStep('res', 1)">
+            Continuar <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2 — ESTILO E INVESTIMENTO -->
+      <div class="form-step" id="res-step-2">
+        <div class="field-group">
+          <label>Faixa de investimento no projeto</label>
+          <div class="radio-grid res-section">
+            <div class="radio-card">
+              <input type="radio" name="inv_res" id="ri1" value="Até R$ 80 mil">
+              <label class="radio-label" for="ri1"><span class="rl-main">Até R$ 80 mil</span></label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="inv_res" id="ri2" value="R$ 80k – R$ 200k">
+              <label class="radio-label" for="ri2"><span class="rl-main">R$ 80k – R$ 200k</span></label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="inv_res" id="ri3" value="R$ 200k – R$ 500k">
+              <label class="radio-label" for="ri3"><span class="rl-main">R$ 200k – R$ 500k</span></label>
+            </div>
+            <div class="radio-card">
+              <input type="radio" name="inv_res" id="ri4" value="Acima de R$ 500k">
+              <label class="radio-label" for="ri4"><span class="rl-main">Acima de R$ 500k</span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>O que define um projeto ideal pra você?</label>
+          <textarea id="res_ideal" placeholder="Ex: conforto, brasilidade, referências minimalistas, integração com a natureza…"></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>O que você definitivamente NÃO quer?</label>
+          <textarea id="res_naoquero" placeholder="Isso nos ajuda a filtrar melhor e evitar retrabalho." style="min-height:80px"></textarea>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn-prev" onclick="prevStep('res', 2)">← Voltar</button>
+          <button class="btn-next-form btn-res" onclick="nextStep('res', 2)">
+            Continuar <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3 — CONTATO -->
+      <div class="form-step" id="res-step-3">
+        <div class="field-group">
+          <label>Seu nome</label>
+          <input type="text" id="res_nome" placeholder="Como prefere ser chamado(a)?">
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>WhatsApp</label>
+            <input type="tel" id="res_wpp" placeholder="(11) 9 0000-0000">
+          </div>
+          <div class="field-group">
+            <label>E-mail</label>
+            <input type="email" id="res_email" placeholder="seu@email.com">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Como chegou até nós?</label>
+          <select id="res_origem">
+            <option value="">Selecione</option>
+            <option>Instagram @iconicodobrasil</option>
+            <option>Indicação de alguém</option>
+            <option>Google</option>
+            <option>Já conheço o trabalho</option>
+            <option>Outro</option>
+          </select>
+        </div>
+
+        <div class="form-nav">
+          <button class="btn-prev" onclick="prevStep('res', 3)">← Voltar</button>
+          <button class="btn-next-form btn-res" onclick="submitForm('res')">
+            Enviar solicitação ✓
+          </button>
+        </div>
+      </div>
+
+    </form>
+
+    <!-- SUCCESS RES -->
+    <div class="success-wrap" id="success-res">
+      <div class="success-icon icon-success-res">✦</div>
+      <h3 class="success-title serif">Solicitação<br><strong>recebida</strong></h3>
+      <p class="success-text">
+        Obrigado pelo interesse. Nossa equipe vai analisar seu projeto e entrar em contato em breve — prontos pra conversar de verdade.
+      </p>
+      <a class="wpp-btn wpp-res" href="https://wa.me/5511999999999?text=Ol%C3%A1%21+Acabei+de+preencher+o+formul%C3%A1rio+do+Iconico+do+Brasil+(projeto+residencial)." target="_blank">
+        💬 Falar pelo WhatsApp agora
+      </a>
+    </div>
+
+  </div>
+</section>
+
+<script>
+  // ── NAVEGAÇÃO ENTRE SEÇÕES ──
+  function openForm(type) {
+    document.getElementById('hero').style.display = 'none';
+    document.getElementById('proof').style.display = 'none';
+    document.getElementById('form-' + type).classList.add('visible');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goBack() {
+    document.getElementById('form-com').classList.remove('visible');
+    document.getElementById('form-res').classList.remove('visible');
+    document.getElementById('hero').style.display = '';
+    document.getElementById('proof').style.display = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // reset forms
+    resetForm('com');
+    resetForm('res');
+  }
+
+  // ── NAVEGAÇÃO ENTRE STEPS ──
+  function nextStep(type, current) {
+    const next = current + 1;
+    const total = 3;
+    if (next > total) return;
+
+    document.getElementById(type + '-step-' + current).classList.remove('active');
+    document.getElementById(type + '-step-' + next).classList.add('active');
+
+    // update dots
+    const dot = document.getElementById(type + '-dot-' + current);
+    dot.classList.remove('active-' + type);
+    dot.classList.add('done-' + type);
+    dot.textContent = '✓';
+
+    document.getElementById(type + '-dot-' + next).classList.add('active-' + type);
+    document.getElementById(type + '-line-' + current).classList.add('done-' + type);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function prevStep(type, current) {
+    const prev = current - 1;
+    if (prev < 1) return;
+
+    document.getElementById(type + '-step-' + current).classList.remove('active');
+    document.getElementById(type + '-step-' + prev).classList.add('active');
+
+    // restore dots
+    const dot = document.getElementById(type + '-dot-' + current);
+    dot.classList.remove('active-' + type);
+    dot.textContent = current;
+
+    const prevDot = document.getElementById(type + '-dot-' + prev);
+    prevDot.classList.remove('done-' + type);
+    prevDot.classList.add('active-' + type);
+    prevDot.textContent = prev;
+
+    document.getElementById(type + '-line-' + prev).classList.remove('done-' + type);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── SUBMIT ──
+  function submitForm(type) {
+    const nome = document.getElementById(type + '_nome').value.trim();
+    const wpp  = document.getElementById(type + '_wpp').value.trim();
+
+    if (!nome || !wpp) {
+      alert('Por favor, preencha pelo menos seu nome e WhatsApp.');
+      return;
+    }
+
+    // Esconde form, mostra success
+    document.getElementById('form' + (type === 'com' ? 'Com' : 'Res')).style.display = 'none';
+    document.getElementById('steps-' + type).style.display = 'none';
+    document.querySelector('#form-' + type + ' .form-header').style.display = 'none';
+    document.querySelector('#form-' + type + ' .back-btn').style.display = 'none';
+    document.getElementById('success-' + type).classList.add('visible');
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── RESET ──
+  function resetForm(type) {
+    // reset step visibility
+    for (let i = 1; i <= 3; i++) {
+      const step = document.getElementById(type + '-step-' + i);
+      if (step) {
+        step.classList.remove('active');
+        if (i === 1) step.classList.add('active');
+      }
+      const dot = document.getElementById(type + '-dot-' + i);
+      if (dot) {
+        dot.classList.remove('active-' + type, 'done-' + type);
+        dot.textContent = i;
+        if (i === 1) dot.classList.add('active-' + type);
+      }
+      if (i < 3) {
+        const line = document.getElementById(type + '-line-' + i);
+        if (line) line.classList.remove('done-' + type);
+      }
+    }
+
+    // reset form elements
+    const formEl = document.getElementById('form' + (type === 'com' ? 'Com' : 'Res'));
+    if (formEl) {
+      formEl.reset();
+      formEl.style.display = '';
+    }
+
+    const stepsEl = document.getElementById('steps-' + type);
+    if (stepsEl) stepsEl.style.display = '';
+
+    const header = document.querySelector('#form-' + type + ' .form-header');
+    if (header) header.style.display = '';
+
+    const backBtn = document.querySelector('#form-' + type + ' .back-btn');
+    if (backBtn) backBtn.style.display = '';
+
+    const success = document.getElementById('success-' + type);
+    if (success) success.classList.remove('visible');
+  }
+</script>
+</body>
+</html>

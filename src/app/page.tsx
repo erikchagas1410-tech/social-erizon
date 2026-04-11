@@ -14,6 +14,9 @@ export default function HomePage() {
           <Link href="/command-center" className="primary-button">
             Abrir Command Center
           </Link>
+          <Link href="/traffic-agent" className="primary-button" style={{ marginLeft: "8px", marginRight: "8px", backgroundColor: "#BC13FE" }}>
+            Traffic Agent
+          </Link>
           <Link href="/growth-analyst" className="primary-button primary-button--growth">
             Analista de Growth
           </Link>

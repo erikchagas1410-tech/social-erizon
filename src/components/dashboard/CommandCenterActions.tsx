@@ -24,6 +24,10 @@ export function CommandCenterActions() {
         Atualizar
       </button>
 
+      <Link href="/traffic-agent" className="ghost-button">
+        Traffic Agent
+      </Link>
+
       <Link href="/growth-analyst" className="ghost-button">
         Analista de Growth
       </Link>

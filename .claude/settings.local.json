@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp \"/c/Users/isado/Documents/aios-core/aios-core/squads/claude-code-mastery/agents/\"*.md \"c:/Users/isado/OneDrive/Área de Trabalho/social-erizonai/.claude/agents/\")",
+      "Bash(echo \"Squad claude-code-mastery: $? \\(0=ok\\)\")",
+      "Bash(cp \"/c/Users/isado/Documents/aios-core/aios-core/.aiox-core/development/agents/\"*.md \"c:/Users/isado/OneDrive/Área de Trabalho/social-erizonai/.claude/agents/\")",
+      "Bash(echo \"Core agents: $? \\(0=ok\\)\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vercel:*)",
+      "Bash(node -e ':*)",
+      "Bash(npx next:*)",
+      "Bash(gh run:*)",
+      "Bash(node -e \"const {getPortalHtml} = require\\('./src/lib/portal-html.ts'\\); console.log\\('ok'\\)\")"
+    ]
+  }
+}
